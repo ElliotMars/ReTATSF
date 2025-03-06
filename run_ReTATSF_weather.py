@@ -14,10 +14,10 @@ parser.add_argument('--random_seed', type=int, default=2025, help='random seed')
 parser.add_argument('--is_training', type=int, required=True, default=1, help='status')
 
 #ReTATSF dataloader
-parser.add_argument('--root_path', type=str, default='', help='root path')
-parser.add_argument('--TS_data_path', type=str, default='', help='Time series data path')
-parser.add_argument('--QT_data_path', type=str, default='', help='Query text data path')
-parser.add_argument('--NewsDatabase_path', type=str, default='', help='News database path')
+parser.add_argument('--root_path', type=str, default='../dataset', help='root path')
+parser.add_argument('--TS_data_path', type=str, default='Weather_captioned/weather_2014-18.parquet', help='Time series data path')
+parser.add_argument('--QT_data_path', type=str, default='QueryTextPackage.parquet', help='Query text data path')
+parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embedding-paraphrase-MiniLM-L6-v2', help='News database path')
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
 
@@ -41,11 +41,13 @@ parser.add_argument('--nref_text', type=int, default=6, help='number of text ret
 parser.add_argument('--seq_len', type=int, default=60, help='sequence length')
 parser.add_argument('--pred_len', type=int, default=14, help='predicted length')
 parser.add_argument('--stride', type=int, default=8, help='stride')
-parser.add_argument('--target_id', type=str, default=None, help='name of target TS')
+parser.add_argument('--target_id', type=str, required=True, help='name of target TS')
 
 #optimization
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--itr', type=int, default=2, help='experiments times')
+parser.add_argument('--batch_size', type=int, default=64, help='batch size of train input data')
+parser.add_argument('--num_workers', type=int, default=2, help='data loader num workers')
 
 if __name__ == '__main__':
     args = parser.parse_args()

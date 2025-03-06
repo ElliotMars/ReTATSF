@@ -1,5 +1,6 @@
 from torch.utils.data import DataLoader
 from data_provider.data_loader import Dataset_ReTATSF_weather
+import torch
 
 def ReTATSF_weather_data_provider(args, flag):
     TS_data_path = args.TS_data_path
@@ -31,7 +32,7 @@ def ReTATSF_weather_data_provider(args, flag):
         NewsDatabase_path=NewsDatabase_path,
         flag=flag,
         size=[args.seq_len, args.pred_len],
-        features=args.features,
+        #features=args.features,
         target_id=args.target_id,
         #info_overhead=args.info_overhead,
         #news_pre_embed=args.news_pre_embed,
@@ -51,3 +52,12 @@ def ReTATSF_weather_data_provider(args, flag):
         drop_last=drop_last,
         collate_fn=custom_collate_fn)
     return data_set, data_loader
+
+def custom_collate_fn(batch):
+    batch_target_series_x = [torch.tensor(item[0]).unsqueeze(0).permute(1, 0) for item in batch]
+    batch_target_series_y = [torch.tensor(item[1]).unsqueeze(0).permute(1, 0) for item in batch]
+    batch_TS_database = [torch.tensor(item[2]).permute(1, 0) for item in batch]
+    batch_qt = [torch.tensor(item[3]) for item in batch]
+    batch_newsdatabase = [item[4] for item in batch]
+
+    return batch_target_series_x, batch_target_series_y, batch_TS_database, batch_qt, batch_newsdatabase
