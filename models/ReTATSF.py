@@ -9,7 +9,7 @@ class Model(nn.Module):
         self.ContentSynthesis = ContentSynthesis(configs)
         #self.QueryTextencoder = QueryTextencoder()
         self.TextCrossAttention = TextCrossAttention(configs)
-        self.CrossandOutput = CrossandOutput()
+        self.CrossandOutput = CrossandOutput(configs)
 
         self.configs = configs
 
@@ -23,6 +23,6 @@ class Model(nn.Module):
         Text_Synthesis = self.TextCrossAttention(qt, newsdatabase)#[B, K_text, H, D_text]
 
         #Cross and Output
-        prediction = self.CrossAndOutput(Text_Synthesis, TS_Synthesis) #[B, L]
+        prediction = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, L]
 
         return prediction #[B, L]

@@ -78,7 +78,7 @@ class TS_CoherAnalysis(nn.Module):
         return torch.gather(TS_database, 1, topk_indices.unsqueeze(-1).expand(-1, -1, TS_database.size(-1)))
 
 class ContentSynthesis(nn.Module):
-    def __init__(self, configs, input_dim=1, d_model=64, nhead=4):
+    def __init__(self, configs, input_dim=1, d_model=384, nhead=4):
         super(ContentSynthesis, self).__init__()
         self.d_model = d_model
 
@@ -245,13 +245,13 @@ class TextCrossAttention(nn.Module):
         B, K, H, D = qt_emb.shape
         _, K_n, M, _ = ref_news_embed.shape
 
-        qt_emb = qt_emb.reshape(B*K, H, D)
+        qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*self.K_n, H, D)
         ref_news_embed = ref_news_embed.reshape(B*K_n, M, D)
 
-        result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*K, H, D]
-        result = self.self_encoder(tgt=result, memory=result)#[B*K, H, D]
+        result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*K_n, H, D]
+        result = self.self_encoder(tgt=result, memory=result)#[B*K_n, H, D]
 
-        result = result.view(B, K, -1, D)
+        result = result.view(B, self.K_n, -1, D)
 
         return result
 
@@ -278,7 +278,7 @@ class TextCrossAttention(nn.Module):
         topk_indices = topk_indices.view(B, K, self.K_n, 1, 1).expand(expand_dims)
 
         # 从 nd_emb 收集结果 [B, K, Kn, M, D]
-        selected = nd_emb.unsqueeze(1).gather(  # 添加 K 维度
+        selected = nd_emb.unsqueeze(-2).unsqueeze(1).gather(  # 添加 K 维度,找回M维度
             dim=2,  # 在 N 维度上收集
             index=topk_indices
         )
@@ -287,7 +287,7 @@ class TextCrossAttention(nn.Module):
         return selected.squeeze(1) if K == 1 else selected
 
 class CrossandOutput(nn.Module):
-    def __init__(self, text_embedding_dim=384, temp_embedding_dim=64, n_heads=8, dropout=0.0, self_layer=3, cross_layer=3):
+    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.0, self_layer=3, cross_layer=3):
         super(CrossandOutput, self).__init__()
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                          nhead=n_heads,
@@ -316,7 +316,7 @@ class CrossandOutput(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-        self.dimension_reducer = DimensionReducer()
+        self.dimension_reducer = DimensionReducer(configs)
 
         # 输出线性网络
         self.mlp = nn.Sequential(
@@ -348,7 +348,7 @@ class CrossandOutput(nn.Module):
         return result
 
 class DimensionReducer(nn.Module):
-    def __init__(self, d_model=64, nhead=8, num_layers=3):
+    def __init__(self, configs, d_model=384, nhead=8, num_layers=3):
         super().__init__()
         # 定义Transformer编码层
         encoder_layer = nn.TransformerEncoderLayer(
@@ -361,13 +361,7 @@ class DimensionReducer(nn.Module):
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
 
         # 通道压缩层 (将C维度压缩为1)
-        self.channel_reducer = nn.Conv2d(
-            in_channels=1,  # 将C维度视为通道
-            out_channels=1,
-            kernel_size=1,
-            stride=1,
-            padding=0
-        )
+        self.channel_reducer = nn.Linear(configs.nref_text, 1)
 
     def forward(self, x):
         """
@@ -390,11 +384,12 @@ class DimensionReducer(nn.Module):
         recovered = transformer_out.view(B, L, C, D)
 
         # 阶段4: 通道压缩 (将C维度压缩为1)
-        # 添加通道维度 [B, 1, L, C, D]
-        squeezed = self.channel_reducer(
-            recovered.unsqueeze(1)  # 添加通道维度
-        )  # 输出 [B, 1, L, 1, D]
+        # 调整输入张量的形状，使其符合 nn.Conv2d 的要求 [B, C, L, D] -> [B, D, L, C]
+        recovered = recovered.permute(0, 3, 1, 2)  # [B, D, L, C]
 
-        # 最终维度调整
-        final_output = squeezed.squeeze(3).squeeze(1)  # [B, L, D]
+        # 应用1x1卷积，将C维度压缩为1
+        squeezed = self.channel_reducer(recovered)  # [B, D, L, 1]
+
+        # 最终维度调整 [B, D, L, 1] -> [B, L, D]
+        final_output = squeezed.squeeze(-1).permute(0, 2, 1)  # [B, L, D]
         return final_output

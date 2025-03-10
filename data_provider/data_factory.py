@@ -54,10 +54,10 @@ def ReTATSF_weather_data_provider(args, flag, target_id):
     return data_set, data_loader
 
 def custom_collate_fn(batch):
-    batch_target_series_x = [torch.tensor(item[0]).unsqueeze(0).permute(1, 0) for item in batch]
-    batch_target_series_y = [torch.tensor(item[1]).unsqueeze(0).permute(1, 0) for item in batch]
-    batch_TS_database = [torch.tensor(item[2]).permute(1, 0) for item in batch]
-    batch_qt = [torch.tensor(item[3]) for item in batch]
-    batch_newsdatabase = [item[4] for item in batch]
+    batch_target_series_x = torch.stack([torch.tensor(item[0]).permute(1, 0) for item in batch])
+    batch_target_series_y = torch.stack([torch.tensor(item[1]).permute(1, 0) for item in batch])
+    batch_TS_database = torch.stack([torch.tensor(item[2]).permute(1, 0) for item in batch])
+    batch_qt = torch.stack([torch.tensor(item[3]) for item in batch])
+    batch_newsdatabase = torch.stack([torch.tensor(item[4]) for item in batch])
 
     return batch_target_series_x, batch_target_series_y, batch_TS_database, batch_qt, batch_newsdatabase

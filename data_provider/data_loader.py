@@ -52,7 +52,7 @@ class Dataset_ReTATSF_weather(Dataset):
         border2 = border2s[self.set_type]
 
         #获得target series TS_database
-        target_series = df_raw[self.target_id].values
+        target_series = df_raw[self.target_id].values.reshape(-1, 1)#[262543, 1]
 
         TS_database = df_raw.drop(columns=[self.target_id, 'Date Time'])
         other_cols_names = TS_database.columns[:]
@@ -64,15 +64,22 @@ class Dataset_ReTATSF_weather(Dataset):
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
 
-            target_series = self.scaler.transform(target_series)
-            TS_database = self.scaler.transform(TS_database)
+            # 将 target_series 和 TS_database 拼接成一个形状为 [262543, 21] 的数组
+            combined_data = np.concatenate([target_series, TS_database], axis=1)  # 形状 [262543, 21]
+            # 使用 self.scaler.transform() 处理拼接后的数据
+            transformed_data = self.scaler.transform(combined_data)  # 形状 [262543, 21]
+            # 将处理后的数据拆分回原来的 target_series 和 TS_database
+            target_series = transformed_data[:, :1]  # 取出前 1 列，形状 [262543, 1]
+            TS_database = transformed_data[:, 1:]  # 取出后 20 列，形状 [262543, 20]
+            # target_series = self.scaler.transform(target_series)
+            # TS_database = self.scaler.transform(TS_database)
 
         self.target_series = target_series[border1:border2]
         self.TS_database = TS_database[border1:border2]
 
         #获取qt_des和time span
         directory_qt_des = os.path.join(self.root_path, self.QT_data_path)
-        df_des = pd.read_parquet("../dataset/QueryTextPackage.parquet")
+        df_des = pd.read_parquet(directory_qt_des)
         self.qt_des = df_des[self.target_id]
         col_time_name = df_raw.columns[0]
         time_span_all = df_raw[col_time_name]
@@ -104,10 +111,10 @@ class Dataset_ReTATSF_weather(Dataset):
 
         TS_database_sample = self.TS_database[lbw_begin:lbw_end]
 
-        start_point = str(self.time_span[lbw_begin])
-        end_point = str(self.time_span[lbw_end])
+        start_point = str(self.time_span[h_begin])
+        end_point = str(self.time_span[h_end])
         qt_sample = f"From {start_point} to {end_point}: {self.qt_des[0]}"
-        qt_sample_embedding = self.qt_encoder.encode(qt_sample)
+        qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
 
         newsdatabase_sample = self.newsdatabase
 

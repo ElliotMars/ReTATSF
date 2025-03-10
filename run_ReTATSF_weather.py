@@ -3,6 +3,7 @@ import torch
 from exp.exp_ReTATSF_weather import Exp_Main
 import random
 import numpy as np
+import multiprocessing
 
 
 parser= argparse.ArgumentParser(description='Retrieval Based Text Augmented Time Series Forecasting')
@@ -20,7 +21,7 @@ parser.add_argument('--QT_data_path', type=str, default='QueryTextPackage.parque
 parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embedding-paraphrase-MiniLM-L6-v2', help='News database path')
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
-parser.add_argument('--checkpoints', type=str, default='../checkpoints/', help='model checkpoints path')
+parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='model checkpoints path')
 
 # GPU
 parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
@@ -33,7 +34,7 @@ parser.add_argument('--test_flop', action='store_true', default=False, help='See
 #Coherence Analysis
 #parser.add_argument('--freq_sample', type=float, default=0.00167, help='frequency of sampling')#10min
 parser.add_argument('--nperseg', type=int, default=30, help='number of samples per segment')#seq_len//2
-parser.add_argument('--nref', type=int, default=5, help='number of reference TS')#nref < 21
+parser.add_argument('--nref', type=int, default=5, help='number of reference TS')#nref < 20
 #Content Synthesis
 parser.add_argument('--naggregation', type=int, default=3, help='number of aggregation module')
 #text retrival
@@ -56,6 +57,7 @@ parser.add_argument('--train_epochs', type=int, default=100, help='train epochs'
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 
 if __name__ == '__main__':
+    multiprocessing.set_start_method("spawn")
     args = parser.parse_args()
 
     # random seed
