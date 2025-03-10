@@ -68,6 +68,7 @@ from sentence_transformers import SentenceTransformer
 
 class TS_CoherAnalysis(nn.Module):
     def __init__(self, configs):
+        super(TS_CoherAnalysis, self).__init__()
         self.configs = configs
     def forward(self, target_series, TS_database):
         nperseg = self.configs.nperseg
@@ -211,7 +212,7 @@ class QueryTextencoder(nn.Module):
 class TextCrossAttention(nn.Module):
     def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0, self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
-        self.K_n = configs.nerf_text
+        self.K_n = configs.nref_text
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
                                                          nhead=n_heads,
                                                          dropout=dropout,

@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 from data_provider.data_loader import Dataset_ReTATSF_weather
 import torch
 
-def ReTATSF_weather_data_provider(args, flag):
+def ReTATSF_weather_data_provider(args, flag, target_id):
     TS_data_path = args.TS_data_path
     QT_data_path = args.QT_data_path
     NewsDatabase_path = args.NewsDatabase_path
@@ -33,7 +33,7 @@ def ReTATSF_weather_data_provider(args, flag):
         flag=flag,
         size=[args.seq_len, args.pred_len],
         #features=args.features,
-        target_id=args.target_id,
+        target_id=target_id,
         #info_overhead=args.info_overhead,
         #news_pre_embed=args.news_pre_embed,
         #des_pre_embed=args.des_pre_embed,
