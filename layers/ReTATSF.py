@@ -255,6 +255,36 @@ class TextCrossAttention(nn.Module):
 
         return result
 
+    # def retrival(self, qt_emb, nd_emb):
+    #     # 输入维度:
+    #     # qt_emb: [B, K, H, D]
+    #     # nd_emb: [B, N, M, D]
+    #
+    #     B, K, H, D = qt_emb.shape
+    #     _, N, M, _ = nd_emb.shape
+    #
+    #     # 压缩时间步维度 (假设 H=1 和 M=1)
+    #     qt_emb = qt_emb.squeeze(2)  # [B, K, D]
+    #     nd_emb = nd_emb.squeeze(2)  # [B, N, D]
+    #
+    #     # 计算相似度矩阵 [B, K, N]
+    #     similarity = torch.matmul(qt_emb, nd_emb.transpose(1, 2))  # Batch matrix multiplication
+    #
+    #     # 取 Top-Kn 相似度索引 [B, K, Kn]
+    #     _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
+    #
+    #     # 生成索引模板 [B, K, Kn, 1, 1] -> 扩展到 [B, K, Kn, M, D]
+    #     expand_dims = (B, K, self.K_n, M, D)
+    #     topk_indices = topk_indices.view(B, K, self.K_n, 1, 1).expand(expand_dims)
+    #
+    #     # 从 nd_emb 收集结果 [B, K, Kn, M, D]
+    #     selected = nd_emb.unsqueeze(-2).unsqueeze(1).gather(  # 添加 K 维度,找回M维度
+    #         dim=2,  # 在 N 维度上收集
+    #         index=topk_indices
+    #     )
+    #
+    #     # 压缩 K 维度 (若 K=1)
+    #     return selected.squeeze(1) if K == 1 else selected
     def retrival(self, qt_emb, nd_emb):
         # 输入维度:
         # qt_emb: [B, K, H, D]
@@ -263,28 +293,26 @@ class TextCrossAttention(nn.Module):
         B, K, H, D = qt_emb.shape
         _, N, M, _ = nd_emb.shape
 
-        # 压缩时间步维度 (假设 H=1 和 M=1)
-        qt_emb = qt_emb.squeeze(2)  # [B, K, D]
-        nd_emb = nd_emb.squeeze(2)  # [B, N, D]
+        # 计算相似度矩阵 [B, K, H, N]
+        similarity = torch.matmul(qt_emb.transpose(1, 2), nd_emb.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)  # [B, K, H, N]
 
-        # 计算相似度矩阵 [B, K, N]
-        similarity = torch.matmul(qt_emb, nd_emb.transpose(1, 2))  # Batch matrix multiplication
-
-        # 取 Top-Kn 相似度索引 [B, K, Kn]
+        # 取 Top-Kn 相似度索引 [B, K, H, Kn]
         _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
 
-        # 生成索引模板 [B, K, Kn, 1, 1] -> 扩展到 [B, K, Kn, M, D]
-        expand_dims = (B, K, self.K_n, M, D)
-        topk_indices = topk_indices.view(B, K, self.K_n, 1, 1).expand(expand_dims)
+        # 生成索引模板 [B, K, H, Kn, 1, 1] -> 扩展到 [B, K, H, Kn, M, D]
+        expand_dims = (B, K, H, self.K_n, M, D)
+        topk_indices = topk_indices.view(B, K, H, self.K_n, 1, 1).expand(expand_dims)
 
-        # 从 nd_emb 收集结果 [B, K, Kn, M, D]
-        selected = nd_emb.unsqueeze(-2).unsqueeze(1).gather(  # 添加 K 维度,找回M维度
-            dim=2,  # 在 N 维度上收集
+        # 从 nd_emb 收集结果 [B, K, H, Kn, M, D]
+        selected = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, 1, 14, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
+            dim=3,  # 在 N 维度上收集
             index=topk_indices
         )
 
-        # 压缩 K 维度 (若 K=1)
-        return selected.squeeze(1) if K == 1 else selected
+        # 重新排列维度以获得 [B, K_n, H, D]
+        selected = selected.squeeze(-2).squeeze(1).permute(0, 2, 1, 3)  # [B, K_n, H, D]
+
+        return selected
 
 class CrossandOutput(nn.Module):
     def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.0, self_layer=3, cross_layer=3):
@@ -342,8 +370,8 @@ class CrossandOutput(nn.Module):
         result = result.view(B, C, -1, D_temp)
 
         # result = result[:, :, -L_temp:, :]
-        result = self.dimension_reducer(result)#[B, L, D]
-        result = self.mlp(result).squeeze(-1)#[B, L, 1]->[B, L]
+        result = self.dimension_reducer(result)#[B, 1, L, D]
+        result = self.mlp(result).squeeze(-1)#[B, 1, L, 1]->[B, 1, L]
 
         return result
 
@@ -391,5 +419,5 @@ class DimensionReducer(nn.Module):
         squeezed = self.channel_reducer(recovered)  # [B, D, L, 1]
 
         # 最终维度调整 [B, D, L, 1] -> [B, L, D]
-        final_output = squeezed.squeeze(-1).permute(0, 2, 1)  # [B, L, D]
+        final_output = squeezed.permute(0, 3, 2, 1)  # [B, 1, L, D]
         return final_output

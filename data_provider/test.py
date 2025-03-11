@@ -89,6 +89,7 @@
 import pandas as pd
 import torch
 from sentence_transformers import SentenceTransformer
+import time
 
 BERT_model= 'paraphrase-MiniLM-L6-v2' #'all-mpnet-base-v2'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -103,7 +104,9 @@ des = df['p (mbar)']
 timespan = "From 01.01.2014 00:10:00 to 01.01.2014 00:40:00"
 qt_sample = [timespan + ": " + des[0]]
 print(qt_sample)
-
+time_now = time.time()
 qt_sample_embedding = model.encode(qt_sample)
+time_spend = time.time() - time_now
+print(time_spend)
 print(qt_sample_embedding)
 print(torch.tensor(qt_sample_embedding).size())

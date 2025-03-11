@@ -24,7 +24,7 @@ class Exp_Main(Exp_Basic):
         return model
 
     def _get_data(self, flag, target_id):
-        data_set, data_loader = ReTATSF_weather_data_provider(self.args, flag, target_id)
+        data_set, data_loader = ReTATSF_weather_data_provider(self.args, flag, target_id, self.device)
         return data_set, data_loader
 
     def _select_optimizer(self):
@@ -105,7 +105,7 @@ class Exp_Main(Exp_Basic):
 
                 iter100_time = time.time()
                 for i, (batch_target_series_x, batch_target_series_y,
-                        batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(vali_loader):
+                        batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(train_loader):
                     iter_count += 1
                     model_optim.zero_grad()
                     batch_target_series_x = batch_target_series_x.float().to(self.device)

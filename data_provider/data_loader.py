@@ -5,10 +5,11 @@ import os
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import torch
+import time
 class Dataset_ReTATSF_weather(Dataset):
     def __init__(self, root_path, TS_data_path, QT_data_path, NewsDatabase_path, flag,
                  size, #features,
-                 target_id, scale, stride):
+                 target_id, scale, stride, device):
 
         # size [seq_len, pred_len]
 
@@ -32,7 +33,7 @@ class Dataset_ReTATSF_weather(Dataset):
         self.scale = scale
         self.stride = stride
 
-        self.qt_encoder = qt_encoder()
+        self.qt_encoder = qt_encoder(device)
 
         self.__read_data__()
 
@@ -111,14 +112,26 @@ class Dataset_ReTATSF_weather(Dataset):
 
         TS_database_sample = self.TS_database[lbw_begin:lbw_end]
 
-        start_point = str(self.time_span[h_begin])
-        end_point = str(self.time_span[h_end])
-        qt_sample = f"From {start_point} to {end_point}: {self.qt_des[0]}"
-        qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+        # start_point = str(self.time_span[h_begin])
+        # end_point = str(self.time_span[h_end])
+        # qt_sample = f"From {start_point} to {end_point}: {self.qt_des[0]}"
+        # qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+        time_span_sample = self.time_span[h_begin:h_end]
+        qt_samples_embedding = []
+
+        #time_now = time.time()
+        for point in time_span_sample:
+            day = str(point)
+            qt_sample = f"{day}: {self.qt_des[0]}"
+            qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+            qt_samples_embedding.append(qt_sample_embedding)
+        qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)
+        #time_spend = time.time() - time_now
+        #print(f"encoding time: {time_spend}s")
 
         newsdatabase_sample = self.newsdatabase
 
-        return target_series_x, target_series_y, TS_database_sample, qt_sample_embedding, newsdatabase_sample
+        return target_series_x, target_series_y, TS_database_sample, qt_samples_embedding, newsdatabase_sample
 
     def __len__(self):
         return len(self.target_series) - self.seq_len - self.pred_len + 1
@@ -128,9 +141,9 @@ class Dataset_ReTATSF_weather(Dataset):
 
 
 class qt_encoder():
-    def __init__(self):
+    def __init__(self, device):
         BERT_model = 'paraphrase-MiniLM-L6-v2'  # 'all-mpnet-base-v2'
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device = device
         self.model = SentenceTransformer(BERT_model).to(device)
     def encode(self, qt_sample):
         qt_sample_embedding = self.model.encode(qt_sample)
