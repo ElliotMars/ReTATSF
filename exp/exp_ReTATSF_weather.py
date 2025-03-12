@@ -159,16 +159,17 @@ class Exp_Main(Exp_Basic):
     def test(self, setting, test=0):
         print(f"Test for {setting}")
         setting = time.strftime("%m%d_%H%M%S_", time.localtime()) + setting
-        folder_path = '../test_results/' + setting + '/'
+        folder_path = './test_results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
+        self.target_ids = self.args.target_ids
         for target_id in self.target_ids:
             test_data, test_loader = self._get_data(flag='test', target_id=target_id)
 
             if test:
                 print('loading model')
-            self.model.load_state_dict(torch.load('../checkpoints/'))#!!!!!!!!!!!!
+                self.model.load_state_dict(torch.load(os.path.join(self.args.checkpoints, "0311_222542_Target_['p (mbar)'] SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_4/p (mbar)_best_checkpoint.pth")))
 
             preds = []
             trues = []
@@ -187,31 +188,31 @@ class Exp_Main(Exp_Basic):
 
                     outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 
-                    outputs = outputs.unsqueeze(-1)#[b, l, 1]
-                    batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
-                    batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
-
-                    b, l, c = outputs.shape
-                    outputs = outputs.reshape(-1, c)
-                    batch_target_series_y = batch_target_series_y.reshape(-1, c)
-
-                    outputs = outputs.detach().cpu().numpy()
-                    batch_target_series_y = batch_target_series_y.detach().cpu().numpy()
-                    outputs = test_data.scaler.inverse_transform(outputs).to(self.device)
-                    batch_target_series_y = test_data.scaler.inverse_transform(batch_target_series_y).to(self.device)
-
-                    outputs = outputs.reshape(b, l, c)
-                    batch_target_series_y = batch_target_series_y.reshape(b, l, c)
-
-                    b, l, c = batch_target_series_x.shape
-                    batch_target_series_x = batch_target_series_x.reshape(-1, c)
-                    batch_target_series_x = batch_target_series_x.detach().cpu().numpy()
-                    batch_target_series_x = test_data.scaler.inverse_transform(batch_target_series_x).to(self.device)
-
-                    #outputs = outputs.squeeze(-1)#[b, l]
-                    batch_target_series_x = batch_target_series_x.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
-                    batch_target_series_x = batch_target_series_x.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
-                    batch_target_series_y = batch_target_series_y.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
+                    # outputs = outputs.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
+                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
+                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
+                    #
+                    # b, l, c = outputs.shape
+                    # outputs = outputs.reshape(-1, c)
+                    # batch_target_series_y = batch_target_series_y.reshape(-1, c)
+                    #
+                    # outputs = outputs.detach().cpu().numpy()
+                    # batch_target_series_y = batch_target_series_y.detach().cpu().numpy()
+                    # outputs = test_data.scaler.inverse_transform(outputs).to(self.device)
+                    # batch_target_series_y = test_data.scaler.inverse_transform(batch_target_series_y).to(self.device)
+                    #
+                    # outputs = outputs.reshape(b, l, c)
+                    # batch_target_series_y = batch_target_series_y.reshape(b, l, c)
+                    #
+                    # b, l, c = batch_target_series_x.shape
+                    # batch_target_series_x = batch_target_series_x.reshape(-1, c)
+                    # batch_target_series_x = batch_target_series_x.detach().cpu().numpy()
+                    # batch_target_series_x = test_data.scaler.inverse_transform(batch_target_series_x).to(self.device)
+                    #
+                    # #outputs = outputs.squeeze(-1)#[b, l]
+                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
+                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
+                    # batch_target_series_y = batch_target_series_y.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
 
                     outputs = outputs.detach().cpu().numpy()
                     batch_target_series_x = batch_target_series_x.detach().cpu().numpy()

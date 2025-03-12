@@ -42,7 +42,8 @@ def ReTATSF_weather_data_provider(args, flag, target_id, device):
         #text_dim=args.text_dim,
         scale=True,
         stride=args.stride,
-        device=device# disable the individual norm
+        device=device,
+        num_data=args.num_data# disable the individual norm
     )
     print(flag, len(data_set))
     data_loader = DataLoader(

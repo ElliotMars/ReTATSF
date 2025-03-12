@@ -22,6 +22,7 @@ parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embed
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='model checkpoints path')
+parser.add_argument('--num_data', type=int, default=2600, help='number of data points in total')
 
 # GPU
 parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
@@ -49,7 +50,7 @@ parser.add_argument('--target_ids', nargs='+', required=True, type=str, help='na
 #optimization
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--itr', type=int, default=1, help='experiments times')
-parser.add_argument('--batch_size', type=int, default=4, help='batch size of train input data')
+parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')
 parser.add_argument('--num_workers', type=int, default=2, help='data loader num workers')
 parser.add_argument('--patience', type=int, default=100, help='early stopping patience')
 parser.add_argument('--pct_start', type=float, default=0.3, help='pct_start')
@@ -83,7 +84,7 @@ if __name__ == '__main__':
     if args.is_training:
         for ii in range(args.itr):
             #setting record of experiments
-            setting = 'Target_{} SeqLen_{} PredLen_{} Train_{} GPU_{} Kt_{} Kn{} Naggregation_{} Nperseg_{} LR_{} Itr_{}'.format(
+            setting = 'Target_{} SeqLen_{} PredLen_{} Train_{} GPU_{} Kt_{} Kn{} Naggregation_{} Nperseg_{} LR_{} Itr_{} bs_{}'.format(
                 args.target_ids,
                 args.seq_len,
                 args.pred_len,
@@ -94,7 +95,8 @@ if __name__ == '__main__':
                 args.naggregation,
                 args.nperseg,
                 args.learning_rate,
-                args.itr
+                args.itr,
+                args.batch_size
             )
 
             exp = Exp(args)
@@ -104,9 +106,9 @@ if __name__ == '__main__':
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
 
-        else:
-            ii = 0
-            setting = 'Target_{} SeqLen_{} PredLen_{} Train_{} GPU_{} Kt_{} Kn{} Naggregation_{} Nperseg_{} LR_{} Itr_{}'.format(
+    else:
+        ii = 0
+        setting = 'Target_{} SeqLen_{} PredLen_{} Train_{} GPU_{} Kt_{} Kn{} Naggregation_{} Nperseg_{} LR_{} Itr_{}'.format(
                 args.target_ids,
                 args.seq_len,
                 args.pred_len,
@@ -120,7 +122,7 @@ if __name__ == '__main__':
                 args.itr
             )
 
-            exp = Exp(args)  # set experiments
-            print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-            exp.test(setting, test=1)
-            torch.cuda.empty_cache()
+        exp = Exp(args)  # set experiments
+        print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+        exp.test(setting, test=1)
+        torch.cuda.empty_cache()

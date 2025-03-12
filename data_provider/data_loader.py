@@ -9,7 +9,7 @@ import time
 class Dataset_ReTATSF_weather(Dataset):
     def __init__(self, root_path, TS_data_path, QT_data_path, NewsDatabase_path, flag,
                  size, #features,
-                 target_id, scale, stride, device):
+                 target_id, scale, stride, device, num_data):
 
         # size [seq_len, pred_len]
 
@@ -32,6 +32,7 @@ class Dataset_ReTATSF_weather(Dataset):
         self.target_id = target_id
         self.scale = scale
         self.stride = stride
+        self.num_data = num_data
 
         self.qt_encoder = qt_encoder(device)
 
@@ -42,6 +43,24 @@ class Dataset_ReTATSF_weather(Dataset):
         df_raw = pd.read_parquet(os.path.join(self.root_path, self.TS_data_path))
         df_raw['Date Time'] = pd.to_datetime(df_raw['Date Time'], format='%d.%m.%Y %H:%M:%S')
         df_raw['Date Time'] = df_raw['Date Time'].dt.strftime('%Y%m%d%H%M').astype(int)
+        # 参数定义
+        #num_samples = 2600  # 目标样本数
+        #stride = 10  # 步长（可调）
+        original_rows = len(df_raw)
+
+        # 计算有效起始点范围
+        max_start = original_rows - self.stride * (self.num_data - 1) - 1
+        if max_start < 0:
+            raise ValueError(f"步长 {self.stride} 过大，无法抽取 {self.num_data} 行数据")
+
+        # 随机选择起始点
+        start_index = np.random.randint(0, max_start)
+
+        # 生成索引列表
+        indices = [start_index + i * self.stride for i in range(self.num_data)]
+
+        # 抽取数据生成新 DataFrame
+        df_raw = df_raw.iloc[indices]
 
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
@@ -117,8 +136,8 @@ class Dataset_ReTATSF_weather(Dataset):
         # qt_sample = f"From {start_point} to {end_point}: {self.qt_des[0]}"
         # qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
         time_span_sample = self.time_span[h_begin:h_end]
-        qt_samples_embedding = []
 
+        qt_samples_embedding = []
         #time_now = time.time()
         for point in time_span_sample:
             day = str(point)
@@ -128,6 +147,12 @@ class Dataset_ReTATSF_weather(Dataset):
         qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)
         #time_spend = time.time() - time_now
         #print(f"encoding time: {time_spend}s")
+        # qt_samples = []
+        # for point in time_span_sample:
+        #     day = str(point)
+        #     qt_sample = f"{day}: {self.qt_des[0]}"
+        #     qt_samples.append(qt_sample)
+        # qt_samples_embedding = self.qt_encoder.encode(qt_samples).reshape(1, 14, 384)
 
         newsdatabase_sample = self.newsdatabase
 
