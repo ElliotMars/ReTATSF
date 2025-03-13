@@ -22,7 +22,7 @@ parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embed
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='model checkpoints path')
-parser.add_argument('--num_data', type=int, default=2600, help='number of data points in total')
+parser.add_argument('--num_data', type=int, default=13000, help='number of data points in total')
 
 # GPU
 parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')

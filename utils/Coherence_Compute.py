@@ -18,7 +18,7 @@ def vectorized_compute_coherence(target: torch.Tensor,
     """
     B, k, L = database.shape
     n_overlap = nperseg // 2
-    nseg = (L - n_overlap) // (nperseg - n_overlap)
+    nseg = (L - nperseg) // (nperseg - n_overlap) + 1
 
     # 分段处理
     target_seg = target.unfold(-1, nperseg, nperseg - n_overlap)[:, :nseg]  # [B, nseg, nperseg]
@@ -27,7 +27,7 @@ def vectorized_compute_coherence(target: torch.Tensor,
     # 加窗
     window = torch.hann_window(nperseg, device=target.device)
     target_windowed = target_seg * window  # [B, nseg, nperseg]
-    database_windowed = database_seg * window.unsqueeze(0).unsqueeze(0)  # [B, 20, nseg, nperseg]
+    database_windowed = database_seg * window#.unsqueeze(0).unsqueeze(0)  # [B, 20, nseg, nperseg]
 
     # 计算FFT
     fft_target = fft.rfft(target_windowed, dim=-1)  # [B, nseg, nperseg//2+1]

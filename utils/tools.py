@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import time
 import matplotlib.pyplot as plt
+from torch import nn
+from thop import profile
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0):
         self.patience = patience
@@ -17,8 +19,8 @@ class EarlyStopping:
         if self.best_score is None:
             self.best_score = score
             self.save_checkpoint(val_loss, model, path, target_ids)
-            self.counter += 1
         elif score < self.best_score + self.delta:
+            self.counter += 1
             print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
@@ -75,7 +77,7 @@ def visual(true, preds=None, name='./pic/test.pdf'):
     """
     plt.figure()
     plt.plot(true, label='GroundTruth', linewidth=2)
-    # draw a vertical line at x = 60 with grey dashed line style linewidth=2
+    #draw a vertical line at x = 60 with grey dashed line style linewidth=2
     plt.axvline(x=60, linestyle='--', color='grey', linewidth=3)
     plt.axvline(x=75, linestyle='--', color='grey', linewidth=2)
     plt.axvline(x=55, linestyle='--', color='grey', linewidth=2)
@@ -87,34 +89,54 @@ def visual(true, preds=None, name='./pic/test.pdf'):
     else:
         plt.show()
 
-def test_params_flop(model, batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase):
-    """
-    If you want to thest former's flop, you need to give default value to inputs in model.forward(), the following code can only pass one argument to forward()
-    """
-    model_params = sum(p.numel() for p in model.parameters())
-    print(f'INFO: Trainable parameter count: {model_params / 1e6:.2f}M')
+# def test_params_flop(model, batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase):
+#     """
+#     If you want to thest former's flop, you need to give default value to inputs in model.forward(), the following code can only pass one argument to forward()
+#     """
+#     model_params = sum(p.numel() for p in model.parameters())
+#     print(f'INFO: Trainable parameter count: {model_params / 1e6:.2f}M')
+#
+#     # 确保 batch 维度去掉，只传入输入张量的形状
+#     batch_target_series_x_shape = batch_target_series_x.shape[1:]  # (seq_len, feature_dim)
+#     batch_TS_database_shape = batch_TS_database.shape[1:]
+#     batch_qt_shape = batch_qt.shape[1:]
+#     batch_newsdatabase_shape = batch_newsdatabase.shape[1:]
+#
+#     def input_constructor(input_res):
+#         """构造 `forward()` 需要的所有输入"""
+#         return (torch.randn(1, *batch_target_series_x_shape).cuda(),
+#                 torch.randn(1, *batch_TS_database_shape).cuda(),
+#                 torch.randn(1, *batch_qt_shape).cuda(),
+#                 torch.randn(1, *batch_newsdatabase_shape).cuda())
+#
+#     from ptflops import get_model_complexity_info
+#     with torch.cuda.device(0):
+#         macs, params = get_model_complexity_info(
+#             model.cuda(),
+#             batch_target_series_x_shape,
+#             as_strings=True,
+#             print_per_layer_stat=True,
+#             input_constructor=input_constructor  # 关键：构造多输入
+#         )
+#     print(f'Computational complexity: {macs}')
+#     print(f'Number of parameters: {params}')
 
-    # 确保 batch 维度去掉，只传入输入张量的形状
-    batch_target_series_x_shape = batch_target_series_x.shape[1:]  # (seq_len, feature_dim)
-    batch_TS_database_shape = batch_TS_database.shape[1:]
-    batch_qt_shape = batch_qt.shape[1:]
-    batch_newsdatabase_shape = batch_newsdatabase.shape[1:]
+def test_params_flop(model, test_loader, device):
+    batch_target_series_x, batch_target_series_y, batch_TS_database, batch_qt, batch_newsdatabase = next(iter(test_loader))
+    batch_target_series_x = batch_target_series_x.float().to(device)
+    batch_target_series_y = batch_target_series_y.float().to(device)
+    batch_TS_database = batch_TS_database.float().to(device)
+    batch_qt = batch_qt.float().to(device)
+    batch_newsdatabase = batch_newsdatabase.float().to(device)
+    time_now = time.time()
 
-    def input_constructor():
-        """构造 `forward()` 需要的所有输入"""
-        return (torch.randn(1, *batch_target_series_x_shape).cuda(),
-                torch.randn(1, *batch_TS_database_shape).cuda(),
-                torch.randn(1, *batch_qt_shape).cuda(),
-                torch.randn(1, *batch_newsdatabase_shape).cuda())
+    # for param in self.model.parameters():
+    #     print(param.device)
+    model_to_profile = model.module if isinstance(model, (
+    torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)) else model
 
-    from ptflops import get_model_complexity_info
-    with torch.cuda.device(0):
-        macs, params = get_model_complexity_info(
-            model.cuda(),
-            batch_target_series_x_shape,
-            as_strings=True,
-            print_per_layer_stat=True,
-            input_constructor=input_constructor  # 关键：构造多输入
-        )
-    print(f'Computational complexity: {macs}')
-    print(f'Number of parameters: {params}')
+    macs, params = profile(model_to_profile, inputs=(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase))
+    total_time = time.time() - time_now
+    print('FLOPs: ', macs)
+    print('params: ', params)
+    print('Total time: ', total_time)

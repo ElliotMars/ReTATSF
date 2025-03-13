@@ -23,6 +23,6 @@ class Model(nn.Module):
         Text_Synthesis = self.TextCrossAttention(qt, newsdatabase)#[B, K_text, H, D_text]
 
         #Cross and Output
-        prediction = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, L]
+        prediction = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, 1, L]
 
-        return prediction #[B, L]
+        return prediction #[B, 1, L]

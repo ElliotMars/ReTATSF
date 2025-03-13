@@ -114,7 +114,7 @@ class ContentSynthesis(nn.Module):
 
         # 拼接目标序列和参考序列
         #target = target.unsqueeze(1)  # [B, 1, L, D]
-        combined = torch.cat([target, refs], dim=1)  # [B, K+1, L, D]
+        combined = torch.cat([target, refs], dim=1)  # [B, K_text+1, L, D]
 
         # 多层级聚合（修改聚合层输入）
         for layer in self.aggregation_layers:
@@ -240,7 +240,7 @@ class TextCrossAttention(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, qt_emb, nd_emb):#qt_emb[B, K(1), H(1), D(384)] nd_emb[B, N(7304), M(1), D(384)]
+    def forward(self, qt_emb, nd_emb):#qt_emb[B, K(1), H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
         ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, K_n, M(1), D(384)]
         B, K, H, D = qt_emb.shape
         _, K_n, M, _ = ref_news_embed.shape
@@ -412,7 +412,7 @@ class DimensionReducer(nn.Module):
         recovered = transformer_out.view(B, L, C, D)
 
         # 阶段4: 通道压缩 (将C维度压缩为1)
-        # 调整输入张量的形状，使其符合 nn.Conv2d 的要求 [B, C, L, D] -> [B, D, L, C]
+        # 调整输入张量的形状，使其符合 线性层 的要求 [B, C, L, D] -> [B, D, L, C]
         recovered = recovered.permute(0, 3, 1, 2)  # [B, D, L, C]
 
         # 应用1x1卷积，将C维度压缩为1

@@ -22,7 +22,7 @@ def positional_encoding(x: torch.Tensor) -> torch.Tensor:
     pos_enc[0, 0, :, 1::2] = torch.cos(position * div_term)  # 奇数维度用 cos
 
     # 处理 d_model 为奇数时的最后一个维度
-    if d_model % 2 != 0:
-        pos_enc[0, :, :, -1] = torch.sin(position * div_term[-1])
+    # if d_model % 2 != 0:
+    #     pos_enc[0, :, :, -1] = torch.sin(position * div_term[-1])
 
     return x + pos_enc  # 广播机制自动对齐到 [B, C, L, D]

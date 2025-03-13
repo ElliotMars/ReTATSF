@@ -169,7 +169,11 @@ class Exp_Main(Exp_Basic):
 
             if test:
                 print('loading model')
-                self.model.load_state_dict(torch.load(os.path.join(self.args.checkpoints, "0311_222542_Target_['p (mbar)'] SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_4/p (mbar)_best_checkpoint.pth")))
+                self.model.load_state_dict(torch.load(os.path.join(self.args.checkpoints, "0311_223330_" + setting + "/p (mbar)_best_checkpoint.pth")))
+
+            if self.args.test_flop:
+                test_params_flop(self.model, test_loader, self.device)
+                exit()
 
             preds = []
             trues = []
@@ -230,9 +234,7 @@ class Exp_Main(Exp_Basic):
                         pd = np.concatenate((input[0, 0, :], pred[0, 0, :]), axis=0)
                         #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                         visual(gt, pd, os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
-            if self.args.test_flop:
-                test_params_flop(self.model, batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
-                exit()
+
             preds = np.concatenate(preds, axis=0)
             trues = np.concatenate(trues, axis=0)
             inputx = np.concatenate(inputx, axis=0)
