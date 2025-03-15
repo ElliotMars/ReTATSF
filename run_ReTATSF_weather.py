@@ -52,7 +52,7 @@ parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimiz
 parser.add_argument('--itr', type=int, default=1, help='experiments times')
 parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')
 parser.add_argument('--num_workers', type=int, default=2, help='data loader num workers')
-parser.add_argument('--patience', type=int, default=100, help='early stopping patience')
+parser.add_argument('--patience', type=int, default=10, help='early stopping patience')
 parser.add_argument('--pct_start', type=float, default=0.3, help='pct_start')
 parser.add_argument('--train_epochs', type=int, default=100, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')

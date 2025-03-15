@@ -151,8 +151,8 @@ class Exp_Main(Exp_Basic):
             print("Target {0} training cost time {1} Last Epoch: Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                         target_id, time.time()-target_time, train_loss, vali_loss, test_loss))
             #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            best_target_model_path = path + '/' + target_id + '_best_checkpoint.pth'
-            torch.save(self.model.state_dict(), best_target_model_path)
+            #best_target_model_path = path + '/' + target_id + '_best_checkpoint.pth'
+            #torch.save(self.model.state_dict(), best_target_model_path)
 
         return self.model
 
