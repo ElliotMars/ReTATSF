@@ -40,7 +40,7 @@ def ReTATSF_weather_data_provider(args, flag, target_id, device):
         #text_encoder=text_encoder,
         #add_date=args.add_date,
         #text_dim=args.text_dim,
-        scale=True,
+        scale=False,
         stride=args.stride,
         device=device,
         num_data=args.num_data# disable the individual norm

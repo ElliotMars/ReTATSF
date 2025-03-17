@@ -361,17 +361,17 @@ class CrossandOutput(nn.Module):
         text_emb = text_emb.reshape(B * C, H, D_text)
 
         # cross attention
-        result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [b*K_text, l, d] text as query
+        result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [b*K_text, h, d] text as query
 
-        result = self.self_encoder(tgt=result, memory=result)  # [b*K_text, l, d]
+        result = self.self_encoder(tgt=result, memory=result)  # [b*K_text, h, d]
 
         # reshape the result
         # attn_weights = result[1]
         result = result.view(B, C, -1, D_temp)
 
-        # result = result[:, :, -L_temp:, :]
-        result = self.dimension_reducer(result)#[B, 1, L, D]
-        result = self.mlp(result).squeeze(-1)#[B, 1, L, 1]->[B, 1, L]
+        # result = result[:, :, -H:, :]
+        result = self.dimension_reducer(result)#[B, 1, H, D]
+        result = self.mlp(result).squeeze(-1)#[B, 1, H, 1]->[B, 1, H]
 
         return result
 

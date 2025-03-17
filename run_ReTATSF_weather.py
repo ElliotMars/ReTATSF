@@ -1,10 +1,12 @@
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3,4,5"
+
 import argparse
 import torch
 from exp.exp_ReTATSF_weather import Exp_Main
 import random
 import numpy as np
 import multiprocessing
-
 
 parser= argparse.ArgumentParser(description='Retrieval Based Text Augmented Time Series Forecasting')
 
@@ -22,13 +24,13 @@ parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embed
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='model checkpoints path')
-parser.add_argument('--num_data', type=int, default=13000, help='number of data points in total')
+parser.add_argument('--num_data', type=int, default=2600, help='number of data points in total')
 
 # GPU
 parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
 parser.add_argument('--gpu', type=int, default=0, help='gpu')
 parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
-parser.add_argument('--devices', type=str, default='0,1,2,3', help='device ids of multile gpus')
+parser.add_argument('--devices', type=str, default='0,1,2,3', help='device ids of multiple gpus')
 parser.add_argument('--test_flop', action='store_true', default=False, help='See utils/tools for usage')
 
 #ReTATSF
@@ -54,7 +56,7 @@ parser.add_argument('--batch_size', type=int, default=16, help='batch size of tr
 parser.add_argument('--num_workers', type=int, default=2, help='data loader num workers')
 parser.add_argument('--patience', type=int, default=10, help='early stopping patience')
 parser.add_argument('--pct_start', type=float, default=0.3, help='pct_start')
-parser.add_argument('--train_epochs', type=int, default=100, help='train epochs')
+parser.add_argument('--train_epochs', type=int, default=20, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 
 if __name__ == '__main__':
