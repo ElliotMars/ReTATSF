@@ -247,6 +247,8 @@ class TextCrossAttention(nn.Module):
 
         qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*self.K_n, H, D)
         ref_news_embed = ref_news_embed.reshape(B*K_n, M, D)
+        #print('右下Q: ', qt_emb)
+        #print('右下KV: ', ref_news_embed)
 
         result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*K_n, H, D]
         result = self.self_encoder(tgt=result, memory=result)#[B*K_n, H, D]
@@ -293,8 +295,18 @@ class TextCrossAttention(nn.Module):
         B, K, H, D = qt_emb.shape
         _, N, M, _ = nd_emb.shape
 
+        # 对 qt_emb 进行 Min-Max 归一化到 [-1, 1]
+        qt_min = qt_emb.min(dim=-1, keepdim=True)[0]
+        qt_max = qt_emb.max(dim=-1, keepdim=True)[0]
+        qt_emb_minmax = 2 * (qt_emb - qt_min) / (qt_max - qt_min + 1e-8) - 1
+
+        # 对 nd_emb 进行 Min-Max 归一化到 [-1, 1]
+        nd_min = nd_emb.min(dim=-1, keepdim=True)[0]
+        nd_max = nd_emb.max(dim=-1, keepdim=True)[0]
+        nd_emb_minmax = 2 * (nd_emb - nd_min) / (nd_max - nd_min + 1e-8) - 1
+
         # 计算相似度矩阵 [B, K, H, N]
-        similarity = torch.matmul(qt_emb.transpose(1, 2), nd_emb.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)  # [B, K, H, N]
+        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2), nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)  # [B, K, H, N]
 
         # 取 Top-Kn 相似度索引 [B, K, H, Kn]
         _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
@@ -315,7 +327,7 @@ class TextCrossAttention(nn.Module):
         return selected
 
 class CrossandOutput(nn.Module):
-    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.0, self_layer=3, cross_layer=3):
+    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.0, self_layer=3, cross_layer=3, TS_attn_layer=3):
         super(CrossandOutput, self).__init__()
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                          nhead=n_heads,
@@ -337,10 +349,23 @@ class CrossandOutput(nn.Module):
         self_norm_layer = nn.LayerNorm(text_embedding_dim, eps=1e-5)
         self.self_encoder = nn.TransformerDecoder(self_encoder_layer, self_layer, norm=self_norm_layer)
 
+        TS_self_attn_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
+                                                        nhead=n_heads,
+                                                        dropout=dropout,
+                                                        dim_feedforward=temp_embedding_dim * 4,
+                                                        activation='gelu',
+                                                        batch_first=True,
+                                                        norm_first=True)
+        TS_norm_layer = nn.LayerNorm(temp_embedding_dim, eps=1e-5)
+        self.TS_self_attention = nn.TransformerDecoder(TS_self_attn_layer, TS_attn_layer, norm=TS_norm_layer)
+
         for p in self.cross_encoder.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
         for p in self.self_encoder.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+        for p in self.TS_self_attention.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
@@ -357,8 +382,11 @@ class CrossandOutput(nn.Module):
         B, C, L, D_temp = temp_emb.shape #C=K_temp_plus1
         _, _, H, D_text = text_emb.shape#C=K_text
 
+        text_emb = torch.cat((temp_emb, text_emb), dim=2)
+
         temp_emb = temp_emb.reshape(B * C, L, D_temp)
-        text_emb = text_emb.reshape(B * C, H, D_text)
+        #text_emb = text_emb.reshape(B * C, H, D_text)
+        text_emb = text_emb.reshape(B * C, L+H, D_text)
 
         # cross attention
         result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [b*K_text, h, d] text as query
@@ -368,12 +396,13 @@ class CrossandOutput(nn.Module):
         # reshape the result
         # attn_weights = result[1]
         result = result.view(B, C, -1, D_temp)
+        #print('mlp前的特征： ', result)
 
         # result = result[:, :, -H:, :]
         result = self.dimension_reducer(result)#[B, 1, H, D]
         result = self.mlp(result).squeeze(-1)#[B, 1, H, 1]->[B, 1, H]
 
-        return result
+        return result[:, :, :H]
 
 class DimensionReducer(nn.Module):
     def __init__(self, configs, d_model=384, nhead=8, num_layers=3):

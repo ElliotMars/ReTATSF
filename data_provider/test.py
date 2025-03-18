@@ -86,27 +86,28 @@
 # # 检查结果张量的形状
 # print(result_tensor.shape)  # 应该输出 (7304, 1, 384)
 #-------------------------------------------------------------------------------
-import pandas as pd
-import torch
-from sentence_transformers import SentenceTransformer
-import time
-
-BERT_model= 'paraphrase-MiniLM-L6-v2' #'all-mpnet-base-v2'
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-model = SentenceTransformer(BERT_model).to(device)
-
-df = pd.read_parquet("../dataset/QueryTextPackage.parquet")
-#print(df)
-# df_TS_timespan = pd.read_parquet("../dataset/Weather_captioned/weather_2014-18.parquet")
-# print(df_TS_timespan)
-# print(len(df_TS_timespan))
-des = df['p (mbar)']
-timespan = "From 01.01.2014 00:10:00 to 01.01.2014 00:40:00"
-qt_sample = [timespan + ": " + des[0]]
-print(qt_sample)
-time_now = time.time()
-qt_sample_embedding = model.encode(qt_sample)
-time_spend = time.time() - time_now
-print(time_spend)
-print(qt_sample_embedding)
-print(torch.tensor(qt_sample_embedding).size())
+# import pandas as pd
+# import torch
+# from sentence_transformers import SentenceTransformer
+# import time
+#
+# BERT_model= 'paraphrase-MiniLM-L6-v2' #'all-mpnet-base-v2'
+# device = 'cuda' if torch.cuda.is_available() else 'cpu'
+# model = SentenceTransformer(BERT_model).to(device)
+#
+# df = pd.read_parquet("../dataset/QueryTextPackage.parquet")
+# #print(df)
+# # df_TS_timespan = pd.read_parquet("../dataset/Weather_captioned/weather_2014-18.parquet")
+# # print(df_TS_timespan)
+# # print(len(df_TS_timespan))
+# des = df['p (mbar)']
+# timespan = "From 01.01.2014 00:10:00 to 01.01.2014 00:40:00"
+# qt_sample = [timespan + ": " + des[0]]
+# print(qt_sample)
+# time_now = time.time()
+# qt_sample_embedding = model.encode(qt_sample)
+# time_spend = time.time() - time_now
+# print(time_spend)
+# print(qt_sample_embedding)
+# print(torch.tensor(qt_sample_embedding).size())
+#-------------------------------------------------------------------------------
