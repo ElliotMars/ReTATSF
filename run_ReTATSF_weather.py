@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
 
 import argparse
 import torch
@@ -24,13 +24,13 @@ parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embed
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='model checkpoints path')
-parser.add_argument('--num_data', type=int, default=2600, help='number of data points in total')
+parser.add_argument('--num_data', type=int, default=3200, help='number of data points in total')
 
 # GPU
 parser.add_argument('--use_gpu', type=bool, default=True, help='use gpu')
 parser.add_argument('--gpu', type=int, default=0, help='gpu')
 parser.add_argument('--use_multi_gpu', action='store_true', help='use multiple gpus', default=False)
-parser.add_argument('--devices', type=str, default='0,1,2,3', help='device ids of multiple gpus')
+parser.add_argument('--devices', type=str, default='0,1', help='device ids of multiple gpus')
 parser.add_argument('--test_flop', action='store_true', default=False, help='See utils/tools for usage')
 
 #ReTATSF
@@ -52,11 +52,11 @@ parser.add_argument('--target_ids', nargs='+', required=True, type=str, help='na
 #optimization
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--itr', type=int, default=1, help='experiments times')
-parser.add_argument('--batch_size', type=int, default=16, help='batch size of train input data')
+parser.add_argument('--batch_size', type=int, default=64, help='batch size of train input data')
 parser.add_argument('--num_workers', type=int, default=2, help='data loader num workers')
-parser.add_argument('--patience', type=int, default=10, help='early stopping patience')
+parser.add_argument('--patience', type=int, default=5, help='early stopping patience')
 parser.add_argument('--pct_start', type=float, default=0.3, help='pct_start')
-parser.add_argument('--train_epochs', type=int, default=20, help='train epochs')
+parser.add_argument('--train_epochs', type=int, default=60, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 
 if __name__ == '__main__':

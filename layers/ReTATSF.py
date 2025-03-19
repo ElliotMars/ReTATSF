@@ -210,7 +210,7 @@ class QueryTextencoder(nn.Module):
         return query_emb
 
 class TextCrossAttention(nn.Module):
-    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0, self_layer=3, cross_layer=3):
+    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
         self.K_n = configs.nref_text
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
@@ -327,7 +327,7 @@ class TextCrossAttention(nn.Module):
         return selected
 
 class CrossandOutput(nn.Module):
-    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.0, self_layer=3, cross_layer=3, TS_attn_layer=3):
+    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3, TS_attn_layer=3):
         super(CrossandOutput, self).__init__()
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                          nhead=n_heads,
