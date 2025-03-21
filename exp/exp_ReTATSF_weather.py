@@ -103,7 +103,7 @@ class Exp_Main(Exp_Basic):
                 iter_count = 0
                 self.model.train()
 
-                iter100_time = time.time()
+                iterstage_time = time.time()
                 for i, (batch_target_series_x, batch_target_series_y,
                         batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(train_loader):
                     iter_count += 1
@@ -120,13 +120,13 @@ class Exp_Main(Exp_Basic):
                     loss = criterion(outputs, batch_target_series_y)
                     train_loss.append(loss.item())
 
-                    if (i + 1) % 100 == 0:
+                    if (i + 1) % 10 == 0:
                         print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
-                        speed = (time.time() - iter100_time) / iter_count
+                        speed = (time.time() - iterstage_time) / iter_count
                         left_time_this_target = speed * ((self.args.train_epochs - epoch) * train_steps - i)
                         print('\tspeed: {:.4f}s/iter; left time this target: {:.4f}s'.format(speed, left_time_this_target))
                         iter_count = 0
-                        iter100_time = time.time()
+                        iterstage_time = time.time()
 
                     loss.backward()
                     model_optim.step()
@@ -141,7 +141,7 @@ class Exp_Main(Exp_Basic):
 
                 print("Target: {0} Epoch: {1}, Steps: {2} | Train Loss: {3:.7f} Vali Loss: {4:.7f} Test Loss: {5:.7f}".format(
                     target_id, epoch + 1, train_steps, train_loss, vali_loss, test_loss))
-                early_stopping(vali_loss, self.model, path, target_id)
+                early_stopping(vali_loss, self.model, path, self.target_ids)
                 if early_stopping.early_stop:
                     print("Early stopping")
                     break
