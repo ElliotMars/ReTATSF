@@ -9,7 +9,7 @@ import time
 class Dataset_ReTATSF_weather(Dataset):
     def __init__(self, root_path, TS_data_path, QT_data_path, NewsDatabase_path, flag,
                  size, #features,
-                 target_id, scale, stride, device, num_data):
+                 target_ids, scale, stride, device, num_data):
 
         # size [seq_len, pred_len]
 
@@ -29,7 +29,7 @@ class Dataset_ReTATSF_weather(Dataset):
         self.NewsDatabase_path = NewsDatabase_path
 
         #self.features = features
-        self.target_id = target_id
+        self.target_ids = target_ids
         self.scale = scale
         self.stride = stride
         self.num_data = num_data
@@ -72,11 +72,11 @@ class Dataset_ReTATSF_weather(Dataset):
         border2 = border2s[self.set_type]
 
         #获得target series TS_database
-        target_series = df_raw[self.target_id].values.reshape(-1, 1)#[262543, 1]
+        target_series = df_raw[self.target_ids].values.reshape(-1, len(self.target_ids))#[num_data, C_T]
 
-        TS_database = df_raw.drop(columns=[self.target_id, 'Date Time'])
+        TS_database = df_raw.drop(columns=self.target_ids + ['Date Time'])
         other_cols_names = TS_database.columns[:]
-        TS_database = TS_database[other_cols_names].values #[262543, 20] list
+        TS_database = TS_database[other_cols_names].values #[num_data, 21-C_T] list
 
         if self.scale:
             cols_names = df_raw.columns[1:]
@@ -84,13 +84,13 @@ class Dataset_ReTATSF_weather(Dataset):
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
 
-            # 将 target_series 和 TS_database 拼接成一个形状为 [262543, 21] 的数组
-            combined_data = np.concatenate([target_series, TS_database], axis=1)  # 形状 [262543, 21]
+            # 将 target_series 和 TS_database 拼接成一个形状为 [num_data, 21] 的数组
+            combined_data = np.concatenate([target_series, TS_database], axis=1)  # 形状 [num_data, 21]
             # 使用 self.scaler.transform() 处理拼接后的数据
-            transformed_data = self.scaler.transform(combined_data)  # 形状 [262543, 21]
+            transformed_data = self.scaler.transform(combined_data)  # 形状 [num_data, 21]
             # 将处理后的数据拆分回原来的 target_series 和 TS_database
-            target_series = transformed_data[:, :1]  # 取出前 1 列，形状 [262543, 1]
-            TS_database = transformed_data[:, 1:]  # 取出后 20 列，形状 [262543, 20]
+            target_series = transformed_data[:, :len(self.target_ids)]  # 取出前 C_T 列，形状 [num_data, C_T]
+            TS_database = transformed_data[:, len(self.target_ids):]  # 取出后 21-C_T 列，形状 [num_data, 21-C_T]
             # target_series = self.scaler.transform(target_series)
             # TS_database = self.scaler.transform(TS_database)
 
@@ -100,7 +100,7 @@ class Dataset_ReTATSF_weather(Dataset):
         #获取qt_des和time span
         directory_qt_des = os.path.join(self.root_path, self.QT_data_path)
         df_des = pd.read_parquet(directory_qt_des)
-        self.qt_des = df_des[self.target_id]
+        self.qt_des = df_des[self.target_ids]
         col_time_name = df_raw.columns[0]
         time_span_all = df_raw[col_time_name]
         self.time_span = time_span_all[border1s[0]:border2s[0]].values
@@ -137,14 +137,19 @@ class Dataset_ReTATSF_weather(Dataset):
         # qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
         time_span_sample = self.time_span[h_begin:h_end]
 
-        qt_samples_embedding = []
+
+        qt_samples_embeddings = []
         #time_now = time.time()
-        for point in time_span_sample:
-            day = str(point)
-            qt_sample = f"{day}: {self.qt_des[0]}"
-            qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
-            qt_samples_embedding.append(qt_sample_embedding)
-        qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)
+        for i in range(len(self.target_ids)):
+            qt_samples_embedding = []
+            for point in time_span_sample:
+                day = str(point)
+                qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
+                qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+                qt_samples_embedding.append(qt_sample_embedding)
+            qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)#[1, pred_len, D]
+            qt_samples_embeddings.append(qt_samples_embedding)
+        qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)#[C_T, pred_len, D]
         #time_spend = time.time() - time_now
         #print(f"encoding time: {time_spend}s")
         # qt_samples = []
@@ -156,7 +161,7 @@ class Dataset_ReTATSF_weather(Dataset):
 
         newsdatabase_sample = self.newsdatabase
 
-        return target_series_x, target_series_y, TS_database_sample, qt_samples_embedding, newsdatabase_sample
+        return target_series_x, target_series_y, TS_database_sample, qt_samples_embeddings, newsdatabase_sample
 
     def __len__(self):
         return len(self.target_series) - self.seq_len - self.pred_len + 1

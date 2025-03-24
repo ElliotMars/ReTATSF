@@ -70,12 +70,23 @@ class TS_CoherAnalysis(nn.Module):
     def __init__(self, configs):
         super(TS_CoherAnalysis, self).__init__()
         self.configs = configs
+
     def forward(self, target_series, TS_database):
         nperseg = self.configs.nperseg
-        target = target_series.squeeze(1)  # [B, 1, L]->[B, L]
-        coherence_scores = vectorized_compute_coherence(target, TS_database, nperseg)
-        _, topk_indices = torch.topk(coherence_scores, k=self.configs.nref, dim=1)
-        return torch.gather(TS_database, 1, topk_indices.unsqueeze(-1).expand(-1, -1, TS_database.size(-1)))
+        B, C_T, L = target_series.shape
+        #target_series = target_series.view(B * C_T, L)  # Flatten target_series for batch processing
+        coherence_scores = vectorized_compute_coherence(target_series, TS_database, nperseg)
+
+        # Reshape coherence_scores back to (B, C_T, 21 - C_T)
+        coherence_scores = coherence_scores.view(B, C_T, TS_database.size(1))
+
+        # Select topk coherence scores and their corresponding indices
+        _, topk_indices = torch.topk(coherence_scores, k=self.configs.nref, dim=2)
+
+        # Gather the top-k corresponding database sequences
+        topk_sequences = torch.gather(TS_database.unsqueeze(1).repeat(1, C_T, 1, 1), 2, topk_indices.unsqueeze(-1).expand(-1, -1, -1, TS_database.size(-1))).view(B, C_T*self.configs.nref, L)
+
+        return topk_sequences#[B, C_T*K_T, L]
 
 class ContentSynthesis(nn.Module):
     def __init__(self, configs, input_dim=1, d_model=384, nhead=4):
@@ -154,17 +165,17 @@ class AggregationLayer(nn.Module):
         self.norm2 = nn.LayerNorm(d_model)
         self.norm3 = nn.LayerNorm(d_model)
 
-    def forward(self, x):
+    def forward(self, x):#x:[B, C_T*(K_T+1), L]
 
         # 调整维度用于后续处理
-        B, K_plus1, L, D = x.shape
-        x = x.view(B, K_plus1 * L, D)  # [B, (K+1)*L, D]
+        B, C_Tmul_K_Tplus1_, L, D = x.shape
+        x = x.view(B, C_Tmul_K_Tplus1_ * L, D)  # [B, (C_T*(K_T+1)*L, D]
         B, total_len, D = x.shape
 
         # ---- 阶段1：时间注意力 ----
         # 重塑为 [B*(K+1), L, D]
-        x_time = x.view(B, -1, L, D)  # [B, K+1, L, D]
-        x_time = x_time.reshape(B * (K_plus1), L, D)
+        x_time = x.view(B, -1, L, D)  # [B, C_T*(K_T+1), L, D]
+        x_time = x_time.reshape(B * C_Tmul_K_Tplus1_, L, D)
 
         # 时间维自注意力
         time_out, _ = self.time_attn(
@@ -172,16 +183,16 @@ class AggregationLayer(nn.Module):
             key=x_time,
             value=x_time
         )
-        time_out = self.norm1(x_time + time_out)
+        time_out = self.norm1(x_time + time_out) # [B, C_T*(K_T+1), L, D]
 
-        # 恢复形状 [B, (K+1)*L, D]
-        x = time_out.view(B, K_plus1 * L, D)
+        # 恢复形状 [B, C_T*(K_T+1)*L, D]
+        x = time_out.view(B, C_Tmul_K_Tplus1_ * L, D)
 
         # ---- 阶段2：内容注意力 ----
-        # 重塑为 [B*L, K+1, D]
-        x_content = x.view(B, K_plus1, L, D)  # [B, K+1, L, D]
-        x_content = x_content.permute(0, 2, 1, 3)  # [B, L, K+1, D]
-        x_content = x_content.reshape(B * L, K_plus1, D)
+        # 重塑为 [B*L, C_T*(K_T+1), D]
+        x_content = x.view(B, C_Tmul_K_Tplus1_, L, D)  # [B, C_T*(K_T+1), L, D]
+        x_content = x_content.permute(0, 2, 1, 3)  # [B, L, C_T*(K_T+1), D]
+        x_content = x_content.reshape(B * L, C_Tmul_K_Tplus1_, D)
 
         # 内容维自注意力
         content_out, _ = self.content_attn(
@@ -191,13 +202,13 @@ class AggregationLayer(nn.Module):
         )
         content_out = self.norm2(x_content + content_out)
 
-        # 恢复形状 [B, (K+1)*L, D]
-        x = content_out.view(B, L, K_plus1, D)
-        x = x.permute(0, 2, 1, 3).reshape(B, K_plus1 * L, D)
+        # 恢复形状 [B, C_T*(K_T+1)*L, D]
+        x = content_out.view(B, L, C_Tmul_K_Tplus1_, D)
+        x = x.permute(0, 2, 1, 3).reshape(B, C_Tmul_K_Tplus1_ * L, D)
 
         # ---- 阶段3：前馈网络 ----
         x = self.norm3(x + self.ffn(x))
-        x = x.reshape(B, K_plus1, L, D)
+        x = x.reshape(B, C_Tmul_K_Tplus1_, L, D)
         return x
 
 class QueryTextencoder(nn.Module):
@@ -213,6 +224,7 @@ class TextCrossAttention(nn.Module):
     def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
         self.K_n = configs.nref_text
+        self.pred_len = configs.pred_len
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
                                                          nhead=n_heads,
                                                          dropout=dropout,
@@ -240,20 +252,20 @@ class TextCrossAttention(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, qt_emb, nd_emb):#qt_emb[B, K(1), H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
-        ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, K_n, M(1), D(384)]
-        B, K, H, D = qt_emb.shape
-        _, K_n, M, _ = ref_news_embed.shape
+    def forward(self, qt_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
+        ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, C_T*K_n, H, D]
+        B, C_T, H, D = qt_emb.shape
+        _, C_TmulK_n, _, _ = ref_news_embed.shape
 
-        qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*self.K_n, H, D)
-        ref_news_embed = ref_news_embed.reshape(B*K_n, M, D)
+        qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*C_T*self.K_n, H, D)
+        ref_news_embed = ref_news_embed.reshape(B*C_TmulK_n, H, D)
         #print('右下Q: ', qt_emb)
         #print('右下KV: ', ref_news_embed)
 
-        result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*K_n, H, D]
-        result = self.self_encoder(tgt=result, memory=result)#[B*K_n, H, D]
+        result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
+        result = self.self_encoder(tgt=result, memory=result)#[B*C_T*K_n, H, D]
 
-        result = result.view(B, self.K_n, -1, D)
+        result = result.view(B, C_T*self.K_n, -1, D)
 
         return result
 
@@ -289,10 +301,10 @@ class TextCrossAttention(nn.Module):
     #     return selected.squeeze(1) if K == 1 else selected
     def retrival(self, qt_emb, nd_emb):
         # 输入维度:
-        # qt_emb: [B, K, H, D]
+        # qt_emb: [B, C_T, H, D]
         # nd_emb: [B, N, M, D]
 
-        B, K, H, D = qt_emb.shape
+        B, C_T, H, D = qt_emb.shape
         _, N, M, _ = nd_emb.shape
 
         # 对 qt_emb 进行 Min-Max 归一化到 [-1, 1]
@@ -305,26 +317,26 @@ class TextCrossAttention(nn.Module):
         nd_max = nd_emb.max(dim=-1, keepdim=True)[0]
         nd_emb_minmax = 2 * (nd_emb - nd_min) / (nd_max - nd_min + 1e-8) - 1
 
-        # 计算相似度矩阵 [B, K, H, N]
-        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2), nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)  # [B, K, H, N]
+        # 计算相似度矩阵 [B, C_T, H, N]
+        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2), nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
 
-        # 取 Top-Kn 相似度索引 [B, K, H, Kn]
+        # 取 Top-Kn 相似度索引 [B, C_T, H, Kn]
         _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
 
-        # 生成索引模板 [B, K, H, Kn, 1, 1] -> 扩展到 [B, K, H, Kn, M, D]
-        expand_dims = (B, K, H, self.K_n, M, D)
-        topk_indices = topk_indices.view(B, K, H, self.K_n, 1, 1).expand(expand_dims)
+        # 生成索引模板 [B, C_T, H, Kn, 1, 1] -> 扩展到 [B, C_T, H, Kn, M, D]
+        expand_dims = (B, C_T, H, self.K_n, M, D)
+        topk_indices = topk_indices.view(B, C_T, H, self.K_n, 1, 1).expand(expand_dims)
 
-        # 从 nd_emb 收集结果 [B, K, H, Kn, M, D]
-        selected = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, 1, 14, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
+        # 从 nd_emb 收集结果 [B, C_T, H, Kn, M, D]
+        selected = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, C_T, self.pred_len, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
             dim=3,  # 在 N 维度上收集
             index=topk_indices
         )
 
-        # 重新排列维度以获得 [B, K_n, H, D]
-        selected = selected.squeeze(-2).squeeze(1).permute(0, 2, 1, 3)  # [B, K_n, H, D]
+        # 重新排列维度以获得 [B, C_T, K_n, H, D]
+        selected = selected.squeeze(-2).permute(0, 1, 3, 2, 4)  # [B, C_T, K_n, H, D]
 
-        return selected
+        return selected.reshape(B, C_T*self.K_n, H, D)
 
 class CrossandOutput(nn.Module):
     def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3, TS_attn_layer=3):
@@ -378,29 +390,29 @@ class CrossandOutput(nn.Module):
             nn.Linear(temp_embedding_dim * 4, 1)
         )
 
-    def forward(self, text_emb, temp_emb):
-        B, C, L, D_temp = temp_emb.shape #C=K_temp_plus1
+    def forward(self, text_emb, temp_emb):#text_emb[B, C_T*K_n, H, D] temp_emb[B, C_T*(K_T+1), L, D]
+        B, C_Tmul_K_Tplus1_, L, D_temp = temp_emb.shape #C=K_temp_plus1
         _, _, H, D_text = text_emb.shape#C=K_text
 
-        text_emb = torch.cat((temp_emb, text_emb), dim=2)
+        text_emb = torch.cat((temp_emb, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]
 
-        temp_emb = temp_emb.reshape(B * C, L, D_temp)
+        temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
         #text_emb = text_emb.reshape(B * C, H, D_text)
-        text_emb = text_emb.reshape(B * C, L+H, D_text)
+        text_emb = text_emb.reshape(B * C_Tmul_K_Tplus1_, L+H, D_text)
 
         # cross attention
-        result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [b*K_text, h, d] text as query
+        result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [B*C_T*(K_T+1), L+H, D] text as query
 
-        result = self.self_encoder(tgt=result, memory=result)  # [b*K_text, h, d]
+        result = self.self_encoder(tgt=result, memory=result)  # [B*C_T*(K_T+1), L+H, D]
 
         # reshape the result
         # attn_weights = result[1]
-        result = result.view(B, C, -1, D_temp)
+        result = result.view(B, C_Tmul_K_Tplus1_, -1, D_temp)
         #print('mlp前的特征： ', result)
 
         # result = result[:, :, -H:, :]
-        result = self.dimension_reducer(result)#[B, 1, H, D]
-        result = self.mlp(result).squeeze(-1)#[B, 1, H, 1]->[B, 1, H]
+        result = self.dimension_reducer(result)#[B, C_T, L+H, D]
+        result = self.mlp(result).squeeze(-1)#[B, C_T, L+H, 1]->[B, C_T, L+H]
 
         return result[:, :, :H]
 
@@ -417,36 +429,37 @@ class DimensionReducer(nn.Module):
         )
         self.transformer = nn.TransformerEncoder(encoder_layer, num_layers)
 
+        self.K_n = configs.nref_text
         # 通道压缩层 (将C维度压缩为1)
-        self.channel_reducer = nn.Linear(configs.nref_text, 1)
+        self.channel_reducer = nn.Linear(self.K_n, 1)
 
     def forward(self, x):
         """
-        输入: [B, C, L, D_temp]
-        输出: [B, L, D_temp]
+        输入: [B, C_T*(K_T+1), L+H, D]
+        输出: [B, C_T, L+H, D]
         """
-        B, C, L, D = x.shape
+        B, C_Tmul_K_Tplus1_, LplusH, D = x.shape
 
         # 阶段1: 通道维度预处理
         # 将张量重塑为Transformer期望的3D格式 [B, seq_len, features]
         # 其中 seq_len = C*L，features = D_temp
-        x_reshaped = x.permute(0, 2, 1, 3)  # [B, L, C, D]
-        x_reshaped = x_reshaped.reshape(B, L * C, D)
+        x_reshaped = x.permute(0, 2, 1, 3)  # [B, L+H, C_T*(K_T+1)， D]
+        x_reshaped = x_reshaped.reshape(B, LplusH * C_Tmul_K_Tplus1_, D)
 
         # 阶段2: Transformer处理
-        transformer_out = self.transformer(x_reshaped)  # [B, L*C, D]
+        transformer_out = self.transformer(x_reshaped)  # [B, (L+H)*C_T*(K_T+1), D]
 
         # 阶段3: 维度恢复
-        # 先恢复L和C维度 [B, L, C, D]
-        recovered = transformer_out.view(B, L, C, D)
+        # 先恢复L和C维度 [B, L, C_T*(K_T+1), D]
+        recovered = transformer_out.view(B, LplusH, C_Tmul_K_Tplus1_, D)
 
         # 阶段4: 通道压缩 (将C维度压缩为1)
-        # 调整输入张量的形状，使其符合 线性层 的要求 [B, C, L, D] -> [B, D, L, C]
-        recovered = recovered.permute(0, 3, 1, 2)  # [B, D, L, C]
+        # 调整输入张量的形状，使其符合 线性层 的要求 [B, C_T*(K_T+1), L+H, D] -> [B, D, L+H, C_T*(K_T+1)]
+        recovered = recovered.permute(0, 3, 1, 2).view(B, D, LplusH, -1, self.K_n)  # [B, D, L+H, C_T, (K_T+1)]
 
-        # 应用1x1卷积，将C维度压缩为1
-        squeezed = self.channel_reducer(recovered)  # [B, D, L, 1]
+        # 应用线性层，将C维度压缩为1
+        squeezed = self.channel_reducer(recovered)  # [B, D, L+H, C_T, 1]
 
-        # 最终维度调整 [B, D, L, 1] -> [B, L, D]
-        final_output = squeezed.permute(0, 3, 2, 1)  # [B, 1, L, D]
+        # 最终维度调整 [B, D, L+H, C_T, 1] -> [B, C_T, 1, L+H, D]
+        final_output = squeezed.permute(0, 3, 4, 2, 1).squeeze(2)  # [B, C_T, L+H, D]
         return final_output

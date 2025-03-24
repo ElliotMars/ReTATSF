@@ -111,3 +111,110 @@
 # print(qt_sample_embedding)
 # print(torch.tensor(qt_sample_embedding).size())
 #-------------------------------------------------------------------------------
+import torch
+import torch.nn as nn
+import torch.fft as fft
+class TS_CoherAnalysis(nn.Module):
+    def __init__(self, configs):
+        super(TS_CoherAnalysis, self).__init__()
+        self.configs = configs
+
+    def forward(self, target_series, TS_database):
+        nperseg = self.configs.nperseg
+        B, C_T, L = target_series.shape
+        #target_series = target_series.view(B * C_T, L)  # Flatten target_series for batch processing
+        coherence_scores = vectorized_compute_coherence(target_series, TS_database, nperseg)
+
+        # Reshape coherence_scores back to (B, C_T, 21 - C_T)
+        coherence_scores = coherence_scores.view(B, C_T, TS_database.size(1))
+
+        # Select topk coherence scores and their corresponding indices
+        _, topk_indices = torch.topk(coherence_scores, k=self.configs.nref, dim=2)
+
+        # Gather the top-k corresponding database sequences
+        topk_sequences = torch.gather(TS_database.unsqueeze(1).repeat(1, C_T, 1, 1), 2, topk_indices.unsqueeze(-1).expand(-1, -1, -1, TS_database.size(-1)))
+
+        return topk_sequences
+
+def vectorized_compute_coherence(target: torch.Tensor,
+                                 database: torch.Tensor,
+                                 nperseg: int = 256) -> torch.Tensor:
+    """
+    向量化计算相干性（Batch内并行计算）。
+
+    Args:
+        target: 形状为 [B, C_T, L]
+        database: 形状为 [B, 21 - C_T, L]
+        nperseg: 分段长度
+
+    Returns:
+        相干性矩阵，形状为 [B, C_T, 21 - C_T]
+    """
+    B, C_T, L = target.shape  # Now target is flattened: B*C_T, L
+    _, k, _ = database.shape  # Database is [B, 21 - C_T, L]
+
+    n_overlap = nperseg // 2
+    nseg = (L - nperseg) // (nperseg - n_overlap) + 1
+
+    # 分段处理
+    target_seg = target.unfold(-1, nperseg, nperseg - n_overlap)[:, :nseg]  # [B, C_T, nseg, nperseg]
+    database_seg = database.unfold(-1, nperseg, nperseg - n_overlap)[..., :nseg, :]  # [B, 21 - C_T, nseg, nperseg]
+
+    # 加窗
+    window = torch.hann_window(nperseg, device=target.device)
+    target_windowed = target_seg * window  # [B, C_T, nseg, nperseg]
+    database_windowed = database_seg * window  # [B, 21 - C_T, nseg, nperseg]
+
+    # 计算FFT
+    fft_target = fft.rfft(target_windowed, dim=-1)  # [B, C_T, nseg, nperseg//2+1]
+    fft_database = fft.rfft(database_windowed, dim=-1)  # [B, 21 - C_T, nseg, nperseg//2+1]
+
+    # 计算交叉谱和自谱
+    #Pxy = (fft_target.conj() * fft_database).mean(dim=2)  # [B, 21 - C_T, nperseg//2+1]
+    Pxy = torch.einsum('bcns,bkns->bckns', fft_target.conj(), fft_database).mean(dim=3).squeeze(3)#[B, C_T, 21 - C_T, nperseg//2+1]
+    Pxx = (torch.abs(fft_target) ** 2).mean(dim=2).squeeze(2)  # [B, C_T, nperseg//2+1]
+    Pyy = (torch.abs(fft_database) ** 2).mean(dim=2).squeeze(2)  # [B, 21 - C_T, nperseg//2+1]
+
+    # 计算相干性
+    coherence = (torch.abs(Pxy) ** 2) / (Pxx.unsqueeze(2) * Pyy.unsqueeze(1) + 1e-10)  # [B, C_T, 21 - C_T, nperseg//2+1]
+    return coherence.mean(dim=-1)  # [B, C_T, 21 - C_T]
+
+import torch
+import torch.nn as nn
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+# 假设你已经有 TS_CoherAnalysis 和 vectorized_compute_coherence 类定义
+# 并且已定义其他必要的导入，例如 FFT 函数等
+
+# 配置类
+class Config:
+    def __init__(self):
+        self.nperseg = 30  # 分段长度
+        self.nref = 3  # 选择相干性得分前 3 个序列
+
+# 测试用例
+def test_TS_CoherAnalysis():
+    # 设置配置
+    configs = Config()
+
+    # 创建 TS_CoherAnalysis 实例
+    model = TS_CoherAnalysis(configs).to(device)
+
+    # 模拟输入数据
+    B = 4  # 批次大小
+    C_T = 5  # 目标时间序列的数量
+    L = 100  # 序列长度
+    TS_database = torch.randn(B, 21 - C_T, L).to(device)  # [B, 21-C_T, L] 数据库时间序列
+    target_series = torch.randn(B, C_T, L).to(device)  # [B, C_T, L] 目标时间序列
+
+    # 调用 forward 方法进行测试
+    output = model(target_series, TS_database).cpu().numpy()
+
+    # 输出形状应为 [B, C_T, nref, L]
+    print(f"Output shape: {output.shape}")
+
+    # 进行断言，确保输出形状符合预期
+    assert output.shape == (B, C_T, configs.nref, L), f"Expected output shape: {(B, C_T, configs.nref, L)}, but got {output.shape}"
+
+# 运行测试
+test_TS_CoherAnalysis()

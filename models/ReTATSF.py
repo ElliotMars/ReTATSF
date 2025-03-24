@@ -15,16 +15,16 @@ class Model(nn.Module):
 
     def forward(self, target_series, TS_database, qt, newsdatabase):
         #Time Series
-        ref_TS = self.TS_CoherAnalysis(target_series, TS_database)#[B, nref, L]
+        ref_TS = self.TS_CoherAnalysis(target_series, TS_database)#[B, C_T*K_T, L]
         #print('ref_TS: ', ref_TS)
-        TS_Synthesis = self.ContentSynthesis(target_series, ref_TS) #[B, K_temp+1, L, D_temp]
+        TS_Synthesis = self.ContentSynthesis(target_series, ref_TS) #[B, C_T*(K_T+1), L, D]
 
         #Text
         #qt_embedding = self.QueryTextencoder(qt).unsqueeze(1)#[B, H(1), D_text(384)]->[B,  K(1), H(1), D_text(384)]
-        Text_Synthesis = self.TextCrossAttention(qt, newsdatabase)#[B, K_text, H, D_text]
+        Text_Synthesis = self.TextCrossAttention(qt, newsdatabase)#[B, C_T*K_n, H, D]
         #print('Q: ', Text_Synthesis)
 
         #Cross and Output
-        prediction = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, 1, L]
+        prediction = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, C_T, H]
 
         return prediction #[B, 1, L]

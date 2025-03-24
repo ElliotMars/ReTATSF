@@ -34,14 +34,25 @@ empty_date = []
 progress_bar = tqdm(pd.date_range(start=data['date'].min(), end=data['date'].max(), freq='6h'), desc="Processing Dates")
 days = []
 for day in progress_bar:
-    if len(days) < 5:
+    if len(days) < 499:
         days.append(day)
         continue
 
     days.append(day)
     news = list(data.loc[data['date'].isin(days)]['text'])
     news_embedding = model.encode(news)
-    #news_embedding = news_embedding / np.linalg.norm(news_embedding, axis=1, keepdims=True)
+    news_embedding = news_embedding / np.linalg.norm(news_embedding, axis=1, keepdims=True)
     for d in range(len(days)):
         np.save(os.path.join(save_dir, 'News-' + str(days[d]) + '.npy'), news_embedding[d:d + 1, :])
         progress_bar.set_postfix(CurrentDate=str(day) + ' News=' + str(len(news)))
+    days=[]
+
+# **处理剩余不足 500 天的数据**
+if days:  # 确保 days 里还有未处理的数据
+    news = list(data.loc[data['date'].isin(days)]['text'])
+    news_embedding = model.encode(news)
+    news_embedding = news_embedding / np.linalg.norm(news_embedding, axis=1, keepdims=True)
+
+    for d in range(len(days)):
+        np.save(os.path.join(save_dir, 'News-' + str(days[d]) + '.npy'), news_embedding[d:d + 1, :])
+        progress_bar.set_postfix(CurrentDate=str(days[d]) + ' News=' + str(len(news)))
