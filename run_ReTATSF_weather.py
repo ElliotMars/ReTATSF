@@ -42,6 +42,8 @@ parser.add_argument('--nref', type=int, default=5, help='number of reference TS'
 parser.add_argument('--naggregation', type=int, default=3, help='number of aggregation module')
 #text retrival
 parser.add_argument('--nref_text', type=int, default=6, help='number of text retrival')#nref_text=nref+1
+parser.add_argument('--temp_embedding_dim', type=int, default=384, help='Time series embedding dim')
+parser.add_argument('--text_embedding_dim', type=int, default=384, help='Text embedding dim')
 
 #forecasting task
 parser.add_argument('--seq_len', type=int, default=60, help='sequence length')
@@ -60,7 +62,7 @@ parser.add_argument('--train_epochs', type=int, default=60, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 
 if __name__ == '__main__':
-    multiprocessing.set_start_method("spawn")
+    torch.multiprocessing.set_start_method("spawn")
     args = parser.parse_args()
 
     # random seed

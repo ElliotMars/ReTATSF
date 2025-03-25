@@ -20,7 +20,7 @@ class Model(nn.Module):
         TS_Synthesis = self.ContentSynthesis(target_series, ref_TS) #[B, C_T*(K_T+1), L, D]
 
         #Text
-        #qt_embedding = self.QueryTextencoder(qt).unsqueeze(1)#[B, H(1), D_text(384)]->[B,  K(1), H(1), D_text(384)]
+        #qt_embedding = self.QueryTextencoder(qt).unsqueeze(1)#[B, H(1), D_text]->[B,  K(1), H(1), D_text]
         Text_Synthesis = self.TextCrossAttention(qt, newsdatabase)#[B, C_T*K_n, H, D]
         #print('Q: ', Text_Synthesis)
 

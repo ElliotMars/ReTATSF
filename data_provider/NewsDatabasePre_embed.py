@@ -6,6 +6,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from tqdm import tqdm
 
+
 BERT_model= 'paraphrase-MiniLM-L6-v2' #'all-mpnet-base-v2'
 save_dir='../dataset/NewsDatabase-embedding-' + BERT_model
 if not os.path.exists(save_dir):

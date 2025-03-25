@@ -76,7 +76,7 @@ class Dataset_ReTATSF_weather(Dataset):
 
         TS_database = df_raw.drop(columns=self.target_ids + ['Date Time'])
         other_cols_names = TS_database.columns[:]
-        TS_database = TS_database[other_cols_names].values #[num_data, 21-C_T] list
+        TS_database = TS_database[other_cols_names].values #[num_data, num_series-C_T] list
 
         if self.scale:
             cols_names = df_raw.columns[1:]
@@ -84,13 +84,13 @@ class Dataset_ReTATSF_weather(Dataset):
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
 
-            # 将 target_series 和 TS_database 拼接成一个形状为 [num_data, 21] 的数组
-            combined_data = np.concatenate([target_series, TS_database], axis=1)  # 形状 [num_data, 21]
+            # 将 target_series 和 TS_database 拼接成一个形状为 [num_data, num_series] 的数组
+            combined_data = np.concatenate([target_series, TS_database], axis=1)  # 形状 [num_data, num_series]
             # 使用 self.scaler.transform() 处理拼接后的数据
-            transformed_data = self.scaler.transform(combined_data)  # 形状 [num_data, 21]
+            transformed_data = self.scaler.transform(combined_data)  # 形状 [num_data, num_series]
             # 将处理后的数据拆分回原来的 target_series 和 TS_database
             target_series = transformed_data[:, :len(self.target_ids)]  # 取出前 C_T 列，形状 [num_data, C_T]
-            TS_database = transformed_data[:, len(self.target_ids):]  # 取出后 21-C_T 列，形状 [num_data, 21-C_T]
+            TS_database = transformed_data[:, len(self.target_ids):]  # 取出后 num_series-C_T 列，形状 [num_data, num_series-C_T]
             # target_series = self.scaler.transform(target_series)
             # TS_database = self.scaler.transform(TS_database)
 
@@ -117,7 +117,7 @@ class Dataset_ReTATSF_weather(Dataset):
             array = np.load(file_path)
             arrays.append(array)
 
-        # 将列表中的数组堆叠成一个张量 [7304, 1, 384] == [N, M, D]
+        # 将列表中的数组堆叠成一个张量 [N, M, D_text]
         self.newsdatabase = np.stack(arrays, axis=0)
 
     def __getitem__(self, index):
@@ -134,22 +134,22 @@ class Dataset_ReTATSF_weather(Dataset):
         # start_point = str(self.time_span[h_begin])
         # end_point = str(self.time_span[h_end])
         # qt_sample = f"From {start_point} to {end_point}: {self.qt_des[0]}"
-        # qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+        # qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, text_embedding)
         time_span_sample = self.time_span[h_begin:h_end]
 
 
-        qt_samples_embeddings = []
-        #time_now = time.time()
-        for i in range(len(self.target_ids)):
-            qt_samples_embedding = []
-            for point in time_span_sample:
-                day = str(point)
-                qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
-                qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
-                qt_samples_embedding.append(qt_sample_embedding)
-            qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)#[1, pred_len, D]
-            qt_samples_embeddings.append(qt_samples_embedding)
-        qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)#[C_T, pred_len, D]
+        # qt_samples_embeddings = []
+        # #time_now = time.time()
+        # for i in range(len(self.target_ids)):
+        #     qt_samples_embedding = []
+        #     for point in time_span_sample:
+        #         day = str(point)
+        #         qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
+        #         qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, text_embedding)
+        #         qt_samples_embedding.append(qt_sample_embedding)
+        #     qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)#[1, pred_len, D]
+        #     qt_samples_embeddings.append(qt_samples_embedding)
+        # qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)#[C_T, pred_len, D]
         #time_spend = time.time() - time_now
         #print(f"encoding time: {time_spend}s")
         # qt_samples = []
@@ -157,7 +157,22 @@ class Dataset_ReTATSF_weather(Dataset):
         #     day = str(point)
         #     qt_sample = f"{day}: {self.qt_des[0]}"
         #     qt_samples.append(qt_sample)
-        # qt_samples_embedding = self.qt_encoder.encode(qt_samples).reshape(1, 14, 384)
+        # qt_samples_embedding = self.qt_encoder.encode(qt_samples).reshape(1, self.pred_len, text_embedding)
+
+        qt_samples_embeddings = []
+        # time_now = time.time()
+        for i in range(len(self.target_ids)):
+            qt_samples = []
+            for point in time_span_sample:
+                day = str(point)
+                qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
+                #qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, text_embedding)
+                #qt_samples_embedding.append(qt_sample_embedding)
+                qt_samples.append(qt_sample)
+            #qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)  # [1, pred_len, D]
+            qt_samples_embedding = self.qt_encoder.encode(qt_samples).reshape(1, self.pred_len, -1) # [1, pred_len, D_text]
+            qt_samples_embeddings.append(qt_samples_embedding)
+        qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)  # [C_T, pred_len, D]
 
         newsdatabase_sample = self.newsdatabase
 

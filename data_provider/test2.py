@@ -31,5 +31,24 @@
 #-------------------------------------------------------------------------------
 # print(""+"1")
 #-------------------------------------------------------------------------------
-a = 0.5340 * ((100 - 0) * (183707//4+1)-200)
-print(a)
+# a = 0.5340 * ((100 - 0) * (183707//4+1)-200)
+# print(a)
+#-------------------------------------------------------------------------------
+# import numpy as np
+# import os
+# #获取newsdatabase
+# directory_nd = "../dataset/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2"
+# npy_files = [f for f in os.listdir(directory_nd) if f.endswith('.npy')]
+# # 初始化一个空列表来存储所有加载的数组
+# arrays = []
+#
+# # 逐个加载 .npy 文件并存储在列表中
+# for npy_file in npy_files:
+#     file_path = os.path.join(directory_nd, npy_file)
+#     array = np.load(file_path)
+#     arrays.append(array)
+#
+# # 将列表中的数组堆叠成一个张量 [N, M, D_text]
+# newsdatabase = np.stack(arrays, axis=0)
+# print(newsdatabase.shape)
+#-------------------------------------------------------------------------------

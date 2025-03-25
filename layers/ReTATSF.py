@@ -72,16 +72,23 @@ class TS_CoherAnalysis(nn.Module):
         self.configs = configs
 
     def forward(self, target_series, TS_database):
+        K_T = self.configs.nref
+        if K_T > TS_database.size(1):
+            padding = torch.zeros(target_series.size(0), target_series.size(1)*(K_T - TS_database.size(1)), target_series.size(2))
+            TS_database = TS_database.repeat(1, target_series.size(1), 1)
+            topk_withpadding = torch.concatenate([TS_database, padding], dim=1)
+            return topk_withpadding
+
         nperseg = self.configs.nperseg
         B, C_T, L = target_series.shape
         #target_series = target_series.view(B * C_T, L)  # Flatten target_series for batch processing
         coherence_scores = vectorized_compute_coherence(target_series, TS_database, nperseg)
 
-        # Reshape coherence_scores back to (B, C_T, 21 - C_T)
+        # Reshape coherence_scores back to (B, C_T, num_series - C_T)
         coherence_scores = coherence_scores.view(B, C_T, TS_database.size(1))
 
         # Select topk coherence scores and their corresponding indices
-        _, topk_indices = torch.topk(coherence_scores, k=self.configs.nref, dim=2)
+        _, topk_indices = torch.topk(coherence_scores, k=K_T, dim=2)
 
         # Gather the top-k corresponding database sequences
         topk_sequences = torch.gather(TS_database.unsqueeze(1).repeat(1, C_T, 1, 1), 2, topk_indices.unsqueeze(-1).expand(-1, -1, -1, TS_database.size(-1))).view(B, C_T*self.configs.nref, L)
@@ -89,19 +96,19 @@ class TS_CoherAnalysis(nn.Module):
         return topk_sequences#[B, C_T*K_T, L]
 
 class ContentSynthesis(nn.Module):
-    def __init__(self, configs, input_dim=1, d_model=384, nhead=4):
+    def __init__(self, configs, input_dim=1, nhead=4):
         super(ContentSynthesis, self).__init__()
-        self.d_model = d_model
+        self.d_model = configs.temp_embedding_dim
 
         # 输入嵌入层
-        self.target_embed = nn.Linear(input_dim, d_model)
-        self.ref_embed = nn.Linear(input_dim, d_model)
+        self.target_embed = nn.Linear(input_dim, self.d_model)
+        self.ref_embed = nn.Linear(input_dim, self.d_model)
 
-        self.norm = nn.LayerNorm(d_model)  # 共享归一化层
+        self.norm = nn.LayerNorm(self.d_model)  # 共享归一化层
 
         # 聚合模块堆叠
         self.aggregation_layers = nn.ModuleList([
-            AggregationLayer(d_model, nhead) for _ in range(configs.naggregation)
+            AggregationLayer(self.d_model, nhead) for _ in range(configs.naggregation)
         ])
 
 
@@ -221,28 +228,30 @@ class QueryTextencoder(nn.Module):
         return query_emb
 
 class TextCrossAttention(nn.Module):
-    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
+    def __init__(self, configs, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
         self.K_n = configs.nref_text
         self.pred_len = configs.pred_len
-        cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
+        self.qt_embedding_dim = configs.text_embedding_dim
+        self.nd_embedding_dim = configs.text_embedding_dim
+        cross_encoder_layer = nn.TransformerDecoderLayer(d_model=self.nd_embedding_dim,
                                                          nhead=n_heads,
                                                          dropout=dropout,
-                                                         dim_feedforward=nd_embedding_dim * 4,
+                                                         dim_feedforward=self.nd_embedding_dim * 4,
                                                          activation='gelu',
                                                          batch_first=True,
                                                          norm_first=True)
-        norm_layer = nn.LayerNorm(nd_embedding_dim, eps=1e-5)
+        norm_layer = nn.LayerNorm(self.nd_embedding_dim, eps=1e-5)
         self.cross_encoder = nn.TransformerDecoder(cross_encoder_layer, cross_layer, norm=norm_layer)
 
-        self_encoder_layer = nn.TransformerDecoderLayer(d_model=qt_embedding_dim,
+        self_encoder_layer = nn.TransformerDecoderLayer(d_model=self.qt_embedding_dim,
                                                         nhead=n_heads,
                                                         dropout=dropout,
-                                                        dim_feedforward=qt_embedding_dim * 4,
+                                                        dim_feedforward=self.qt_embedding_dim * 4,
                                                         activation='gelu',
                                                         batch_first=True,
                                                         norm_first=True)
-        self_norm_layer = nn.LayerNorm(qt_embedding_dim, eps=1e-5)
+        self_norm_layer = nn.LayerNorm(self.qt_embedding_dim, eps=1e-5)
         self.self_encoder = nn.TransformerDecoder(self_encoder_layer, self_layer, norm=self_norm_layer)
 
         for p in self.cross_encoder.parameters():
@@ -252,7 +261,7 @@ class TextCrossAttention(nn.Module):
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, qt_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
+    def forward(self, qt_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D_text] nd_emb[B, N(7304), M(1), D_text]
         ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, C_T*K_n, H, D]
         B, C_T, H, D = qt_emb.shape
         _, C_TmulK_n, _, _ = ref_news_embed.shape
@@ -339,8 +348,10 @@ class TextCrossAttention(nn.Module):
         return selected.reshape(B, C_T*self.K_n, H, D)
 
 class CrossandOutput(nn.Module):
-    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3, TS_attn_layer=3):
+    def __init__(self, configs, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3, TS_attn_layer=3):
         super(CrossandOutput, self).__init__()
+        text_embedding_dim = configs.text_embedding_dim
+        temp_embedding_dim = configs.temp_embedding_dim
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                          nhead=n_heads,
                                                          dropout=dropout,
@@ -417,8 +428,9 @@ class CrossandOutput(nn.Module):
         return result[:, :, :H]
 
 class DimensionReducer(nn.Module):
-    def __init__(self, configs, d_model=384, nhead=8, num_layers=3):
+    def __init__(self, configs, nhead=8, num_layers=3):
         super().__init__()
+        d_model = configs.temp_embedding_dim
         # 定义Transformer编码层
         encoder_layer = nn.TransformerEncoderLayer(
             d_model=d_model,
