@@ -114,6 +114,8 @@ class Exp_Main(Exp_Basic):
                 batch_TS_database = batch_TS_database.float().to(self.device)
                 batch_qt = batch_qt.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
+                print('batch_target_series_x: ', batch_target_series_x)
+                print('batch_target_series_y: ', batch_target_series_y)
 
                 outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 
@@ -171,7 +173,7 @@ class Exp_Main(Exp_Basic):
             print('loading model')
             self.model.load_state_dict(torch.load(
                 #os.path.join(self.args.checkpoints, "0311_223330_" + setting + "/p (mbar)_best_checkpoint.pth")
-                os.path.join(self.args.checkpoints, "0317_192951_Target_['p (mbar)'] SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_16/p (mbar)_best_checkpoint.pth")
+                os.path.join(self.args.checkpoints, "0325_185930_Target_['p (mbar)', 'T (degC)', 'Tpot (K)'] SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_64/p (mbar)T (degC)Tpot (K)_best_checkpoint.pth")
             ))
 
         if self.args.test_flop:
@@ -232,12 +234,15 @@ class Exp_Main(Exp_Basic):
                 trues.append(true)
                 inputx.append(batch_target_series_x)
                 if i % 20 == 0:
+                    j=0
                     for target_id in self.target_ids:
-                        j=0
                         input = batch_target_series_x
                         gt = np.concatenate((input[0, j, :], true[0, j, :]), axis=0)
                         pd = np.concatenate((input[0, j, :], pred[0, j, :]), axis=0)
                         #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+                        print("gt: ", gt)
+                        print("pd: ", pd)
+                        print('j: ', j)
                         visual(gt, pd, os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
                         j+=1
 
