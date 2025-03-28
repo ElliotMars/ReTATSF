@@ -240,9 +240,9 @@ class Exp_Main(Exp_Basic):
                         gt = np.concatenate((input[0, j, :], true[0, j, :]), axis=0)
                         pd = np.concatenate((input[0, j, :], pred[0, j, :]), axis=0)
                         #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                        print("gt: ", gt)
-                        print("pd: ", pd)
-                        print('j: ', j)
+                        # print("gt: ", gt)
+                        # print("pd: ", pd)
+                        # print('j: ', j)
                         visual(gt, pd, os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
                         j+=1
 
