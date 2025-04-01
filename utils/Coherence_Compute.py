@@ -23,8 +23,8 @@ def vectorized_compute_coherence(target: torch.Tensor,
     nseg = (L - nperseg) // (nperseg - n_overlap) + 1
 
     # 分段处理
-    target_seg = target.unfold(-1, nperseg, nperseg - n_overlap)[:, :nseg]  # [B, C_T, nseg, nperseg]
-    database_seg = database.unfold(-1, nperseg, nperseg - n_overlap)[..., :nseg, :]  # [B, 21 - C_T, nseg, nperseg]
+    target_seg = target.unfold(-1, nperseg, nperseg - n_overlap)#[:, :, nseg, :]  # [B, C_T, nseg, nperseg]
+    database_seg = database.unfold(-1, nperseg, nperseg - n_overlap)#[..., :, nseg, :]  # [B, 21 - C_T, nseg, nperseg]
 
     # 加窗
     window = torch.hann_window(nperseg, device=target.device)

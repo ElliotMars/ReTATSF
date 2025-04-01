@@ -114,8 +114,8 @@ class Exp_Main(Exp_Basic):
                 batch_TS_database = batch_TS_database.float().to(self.device)
                 batch_qt = batch_qt.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
-                print('batch_target_series_x: ', batch_target_series_x)
-                print('batch_target_series_y: ', batch_target_series_y)
+                # print('batch_target_series_x: ', batch_target_series_x)
+                # print('batch_target_series_y: ', batch_target_series_y)
 
                 outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 

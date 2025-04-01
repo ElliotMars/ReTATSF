@@ -74,6 +74,11 @@ class TS_CoherAnalysis(nn.Module):
     def forward(self, target_series, TS_database):
         nperseg = self.configs.nperseg
         B, C_T, L = target_series.shape
+        if self.configs.nref > TS_database.size(1):
+            topk_sequences = TS_database.repeat(1, C_T, 1)
+            padding = torch.zeros((B, self.configs.nref - TS_database.size(1), L), device=topk_sequences.device).repeat(1, C_T, 1)
+            topk_sequences = torch.concat([topk_sequences, padding], dim=1)
+            return topk_sequences
         #target_series = target_series.view(B * C_T, L)  # Flatten target_series for batch processing
         coherence_scores = vectorized_compute_coherence(target_series, TS_database, nperseg)
 

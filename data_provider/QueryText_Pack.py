@@ -12,7 +12,7 @@ physical_quantities = {
     "VPdef (mbar)": ["Vapor pressure deficit, in millibars. The difference between the maximum vapor pressure and the actual vapor pressure; it indicates how much more moisture the air can hold before saturation."],
     "sh (g/kg)": ["Specific humidity, the mass of water vapor in a given mass of air, including the water vapor. It’s measured in grams of water vapor per kilogram of air."],
     "H2OC (mmol/mol)": ["Water vapor concentration, expressed in millimoles of water per mole of air. It’s another way to quantify the amount of moisture in the air."],
-    "rho (g/m3)": ["Air density, measured in grams per cubic meter. It indicates the mass of air in a given volume and varies with temperature, pressure, and moisture content."],
+    "rho (g/m**3)": ["Air density, measured in grams per cubic meter. It indicates the mass of air in a given volume and varies with temperature, pressure, and moisture content."],
     "wv (m/s)": ["Wind velocity, the speed of the wind measured in meters per second."],
     "max. wv (m/s)": ["Maximum wind velocity observed in the given time period, measured in meters per second."],
     "wd (deg)": ["Wind direction, in degrees from true north. This indicates the direction from which the wind is coming."],

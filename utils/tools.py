@@ -37,7 +37,11 @@ class EarlyStopping:
         for target_id in target_ids:
             id_str += target_id
         #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        torch.save(model.state_dict(), path + '/' + id_str + '_best_checkpoint.pth')
+        #torch.save(model.state_dict(), path + '/' + id_str + '_best_checkpoint.pth')
+        if isinstance(model, torch.nn.DataParallel):
+            torch.save(model.module.state_dict(), path + '/' + id_str + '_best_checkpoint.pth')
+        else:
+            torch.save(model.state_dict(), path + '/' + id_str + '_best_checkpoint.pth')
         self.val_loss_min = val_loss
 
 

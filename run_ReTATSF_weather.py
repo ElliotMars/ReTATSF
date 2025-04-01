@@ -18,7 +18,7 @@ parser.add_argument('--is_training', type=int, required=True, default=1, help='s
 
 #ReTATSF dataloader
 parser.add_argument('--root_path', type=str, default='./dataset', help='root path')
-parser.add_argument('--TS_data_path', type=str, default='Weather_captioned/weather_2014-18.parquet', help='Time series data path')
+parser.add_argument('--TS_data_path', type=str, default='Weather_captioned/weather_2014-18_nc.parquet', help='Time series data path')
 parser.add_argument('--QT_data_path', type=str, default='QueryTextPackage.parquet', help='Query text data path')
 parser.add_argument('--NewsDatabase_path', type=str, default='NewsDatabase-embedding-paraphrase-MiniLM-L6-v2', help='News database path')
 parser.add_argument('--features', type=str, default='M',

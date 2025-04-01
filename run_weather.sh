@@ -1,10 +1,31 @@
-export CUDA_VISIBLE_DEVICES=1,3
+export CUDA_VISIBLE_DEVICES=0,3
 python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
-        --is_training 0 \
+        --random_seed 2025 \
+        --is_training 1 \
+        --root_path './dataset' \
+        --TS_data_path 'Weather_captioned/weather_2014-18_nc.parquet' \
+        --QT_data_path 'QueryTextPackage.parquet' \
+        --NewsDatabase_path 'NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
+        --features 'M' \
+        --checkpoints './M_checkpoints/' \
         --target_ids "p (mbar)" "T (degC)" "Tpot (K)" \
         --use_multi_gpu \
         --batch_size 64 \
         --num_data 6500 \
         --patience 30 \
         --train_epochs 100 \
-        --devices '0,1'
+        --devices '0,1' \
+        --use_gpu True \
+        --gpu 0 \
+        --nperseg 180 \
+        --nref 5 \
+        --naggregation 3 \
+        --nref_text 6 \
+        --seq_len 360 \
+        --pred_len 96 \
+        --stride 8 \
+        --learning_rate 0.0001 \
+        --itr 1 \
+        --num_workers 2 \
+        --pct_start 0.3 \
+        --lradj 'type3'
