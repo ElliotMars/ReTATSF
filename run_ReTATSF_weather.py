@@ -87,7 +87,7 @@ if __name__ == '__main__':
         for ii in range(args.itr):
             #setting record of experiments
             setting = 'Target_{} SeqLen_{} PredLen_{} Train_{} GPU_{} Kt_{} Kn{} Naggregation_{} Nperseg_{} LR_{} Itr_{} bs_{}'.format(
-                args.target_ids,
+                args.target_ids[0]+'-'+args.target_ids[-1],
                 args.seq_len,
                 args.pred_len,
                 args.is_training,
@@ -108,10 +108,12 @@ if __name__ == '__main__':
             print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
             exp.test(setting)
 
+            torch.cuda.empty_cache()
+
     else:
         ii = 0
         setting = 'Target_{} SeqLen_{} PredLen_{} Train_{} GPU_{} Kt_{} Kn{} Naggregation_{} Nperseg_{} LR_{} Itr_{}'.format(
-                args.target_ids,
+                args.target_ids[0]+'-'+args.target_ids[-1],
                 args.seq_len,
                 args.pred_len,
                 args.is_training,
