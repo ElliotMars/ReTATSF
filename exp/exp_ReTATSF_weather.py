@@ -126,7 +126,7 @@ class Exp_Main(Exp_Basic):
                     print("\titers: {0}, epoch: {1} | loss: {2:.7f}".format(i + 1, epoch + 1, loss.item()))
                     speed = (time.time() - iterstage_time) / iter_count
                     left_time_this_target = speed * ((self.args.train_epochs - epoch) * train_steps - i)
-                    print('\tspeed: {:.4f}s/iter; left time this target: {:.4f}s'.format(speed, left_time_this_target))
+                    print('\tspeed: {:.4f}s/iter; left time : {:.4f}s'.format(speed, left_time_this_target))
                     iter_count = 0
                     iterstage_time = time.time()
 
@@ -233,7 +233,7 @@ class Exp_Main(Exp_Basic):
                 preds.append(pred)
                 trues.append(true)
                 inputx.append(batch_target_series_x)
-                if i % 20 == 0:
+                if i % 5 == 0:
                     j=0
                     for target_id in self.target_ids:
                         input = batch_target_series_x

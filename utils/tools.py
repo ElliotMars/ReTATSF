@@ -80,13 +80,14 @@ def visual(true, preds=None, name='./pic/test.pdf'):
     Results visualization
     """
     plt.figure()
-    plt.plot(true, label='GroundTruth', linewidth=2)
     #draw a vertical line at x = 60 with grey dashed line style linewidth=2
     plt.axvline(x=60, linestyle='--', color='grey', linewidth=3)
     plt.axvline(x=75, linestyle='--', color='grey', linewidth=2)
     plt.axvline(x=55, linestyle='--', color='grey', linewidth=2)
     if preds is not None:
         plt.plot(preds, label='Prediction', linewidth=2)
+    plt.plot(true, label='GroundTruth', linewidth=2)
+
     plt.legend()
     if name != "":
         plt.savefig(name, bbox_inches='tight')

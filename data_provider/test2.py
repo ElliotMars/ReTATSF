@@ -40,3 +40,9 @@
 # # df_raw.columns = new_columns
 # # df_raw.to_parquet("../dataset/Weather_captioned/weather_2014-18_nc.parquet", engine="pyarrow")
 # print(df_raw)
+#-------------------------------------------------------------------------------
+import pandas as pd
+df = pd.read_parquet('../dataset/Weather_captioned/weather_2014-18_nc.parquet')
+columns = ['T (degC)', 'rh (%)', 'wv (m_s)']
+df = df[columns]
+print(df)
