@@ -5,6 +5,7 @@ import torch
 def ReTATSF_weather_data_provider(args, flag, target_ids, device):
     TS_data_path = args.TS_data_path
     QT_data_path = args.QT_data_path
+    QT_emb_path = args.QT_emb_path
     NewsDatabase_path = args.NewsDatabase_path
 
     try:
@@ -29,6 +30,7 @@ def ReTATSF_weather_data_provider(args, flag, target_ids, device):
         root_path=args.root_path,
         TS_data_path=TS_data_path,
         QT_data_path=QT_data_path,
+        QT_emb_path=QT_emb_path,
         NewsDatabase_path=NewsDatabase_path,
         flag=flag,
         size=[args.seq_len, args.pred_len],

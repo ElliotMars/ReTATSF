@@ -8,7 +8,7 @@ import torch
 import time
 from datetime import datetime
 class Dataset_ReTATSF_weather(Dataset):
-    def __init__(self, root_path, TS_data_path, QT_data_path, NewsDatabase_path, flag,
+    def __init__(self, root_path, TS_data_path, QT_data_path, QT_emb_path, NewsDatabase_path, flag,
                  size, #features,
                  target_ids, scale, stride, device, num_data):
 
@@ -27,6 +27,7 @@ class Dataset_ReTATSF_weather(Dataset):
         self.root_path = root_path
         self.TS_data_path = TS_data_path
         self.QT_data_path = QT_data_path
+        self.QT_emb_path = QT_emb_path
         self.NewsDatabase_path = NewsDatabase_path
 
         #self.features = features
@@ -171,21 +172,38 @@ class Dataset_ReTATSF_weather(Dataset):
         # end_point = str(self.time_span[h_end])
         # qt_sample = f"From {start_point} to {end_point}: {self.qt_des[0]}"
         # qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+
         time_span_sample = self.time_span[h_begin:h_end]
-
-
+        # 转换为标准格式 "YYYY-MM-DD HH:MM:SS"
+        time_span_sample = [
+            datetime.strptime(str(t), "%Y%m%d%H%M").strftime("%Y-%m-%d %H:%M:%S")
+            for t in time_span_sample
+        ]
         qt_samples_embeddings = []
-        #time_now = time.time()
-        for i in range(len(self.target_ids)):
+        for target_id in self.target_ids:
             qt_samples_embedding = []
             for point in time_span_sample:
-                day = str(point)
-                qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
-                qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+                dir = os.path.join(self.root_path, self.QT_emb_path, target_id, f"{point}{target_id}.npy")
+                qt_sample_embedding = np.load(dir)
                 qt_samples_embedding.append(qt_sample_embedding)
-            qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)#[1, pred_len, D]
+            qt_samples_embedding = np.vstack(qt_samples_embedding)  # [pred_len, D]
             qt_samples_embeddings.append(qt_samples_embedding)
-        qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)#[C_T, pred_len, D]
+        qt_samples_embeddings = np.stack(qt_samples_embeddings,axis=0) #[C_T, pred_len, D]
+        # qt_samples_embeddings = []
+        # #time_now = time.time()
+        # for i in range(len(self.target_ids)):
+        #     qt_samples_embedding = []
+        #     for point in time_span_sample:
+        #         day = str(point)
+        #         qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
+        #         qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
+        #         qt_samples_embedding.append(qt_sample_embedding)
+        #     qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)#[1, pred_len, D]
+        #     qt_samples_embeddings.append(qt_samples_embedding)
+        # qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)#[C_T, pred_len, D]
+
+
+
         #time_spend = time.time() - time_now
         #print(f"encoding time: {time_spend}s")
         # qt_samples = []

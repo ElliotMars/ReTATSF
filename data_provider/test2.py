@@ -41,8 +41,44 @@
 # # df_raw.to_parquet("../dataset/Weather_captioned/weather_2014-18_nc.parquet", engine="pyarrow")
 # print(df_raw)
 #-------------------------------------------------------------------------------
-import pandas as pd
-df = pd.read_parquet('../dataset/Weather_captioned/weather_2014-18_nc.parquet')
-columns = ['T (degC)', 'rh (%)', 'wv (m_s)']
-df = df[columns]
-print(df)
+# import pandas as pd
+# df = pd.read_parquet('../dataset/Weather_captioned/weather_2014-18_nc.parquet')
+# print(df)
+#-------------------------------------------------------------------------------
+import numpy as np
+a = np.load('../dataset/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2019-01-01 00:00:00p (mbar).npy')
+print(a)
+print(a.shape)
+#-------------------------------------------------------------------------------
+# import os
+#
+#
+# def delete_files_with_string(directory, target_string):
+#     # 记录删除的文件数量
+#     deleted_count = 0
+#
+#     # 遍历指定目录中的所有文件
+#     for filename in os.listdir(directory):
+#         # 构建文件的完整路径
+#         file_path = os.path.join(directory, filename)
+#
+#         # 检查是否为文件
+#         if os.path.isfile(file_path):
+#             # 如果文件名包含目标字符串，删除该文件
+#             if target_string in filename:
+#                 try:
+#                     os.remove(file_path)
+#                     print(f"Deleted: {filename}")
+#                     deleted_count += 1
+#                 except Exception as e:
+#                     print(f"Error deleting {filename}: {e}")
+#
+#     # 统计删除文件后目录中剩余的文件数量
+#     remaining_files = len([f for f in os.listdir(directory) if os.path.isfile(os.path.join(directory, f))])
+#     print(f"\nTotal deleted files: {deleted_count}")
+#     print(f"Remaining files: {remaining_files}")
+#
+# # 使用示例
+# directory = '../dataset/QueryText-embedding-paraphrase-MiniLM-L6-v2'  # 替换为目标目录路径
+# target_string = 'T (degC)'  # 替换为你要查找的字符串
+# delete_files_with_string(directory, target_string)
