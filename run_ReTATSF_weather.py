@@ -1,6 +1,3 @@
-import os
-#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
-
 import argparse
 import torch
 from exp.exp_ReTATSF_weather import Exp_Main
@@ -61,10 +58,10 @@ parser.add_argument('--train_epochs', type=int, default=60, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 
 if __name__ == '__main__':
-    multiprocessing.set_start_method("spawn")
-    #torch.multiprocessing.set_start_method('spawn', force=True)
-
     args = parser.parse_args()
+    if args.use_multi_gpu:
+        multiprocessing.set_start_method("spawn")
+        # torch.multiprocessing.set_start_method('spawn', force=True)
 
     # random seed
     fix_seed = args.random_seed

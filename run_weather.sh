@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=1,2,3,4
+export CUDA_VISIBLE_DEVICES=2
 for pred_len in 28 60 120
 do
     python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
@@ -15,11 +15,7 @@ do
             --batch_size 16 \
             --num_data 6500 \
             --patience 30 \
-            --train_epochs 50 \
-            --use_multi_gpu \
-            --devices '0,1,2,3' \
-            --use_gpu True \
-            --gpu 0 \
+            --train_epochs 100 \
             --nperseg 30 \
             --nref 5 \
             --naggregation 3 \
@@ -31,5 +27,10 @@ do
             --itr 1 \
             --num_workers 2 \
             --pct_start 0.3 \
-            --lradj 'type3'
+            --lradj 'type3' \
+            --use_gpu True \
+            --devices '0,1' \
+            --gpu 0
+            #--use_multi_gpu
+
 done
