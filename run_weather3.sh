@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=4,7
+export CUDA_VISIBLE_DEVICES=3
 for pred_len in 120
 do
     python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
@@ -11,8 +11,8 @@ do
             --NewsDatabase_path 'NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './M_checkpoints/' \
-            --target_ids "p (mbar)" "T (degC)" "Tpot (K)" "rh (%)" "VPmax (mbar)" "wv (m_s)" "sh (g_kg)" "Tlog (degC)" \
-            --batch_size 32 \
+            --target_ids "wd (deg)" "raining (s)" "SWDR (W_m2)" "PAR (umol_m2_s)" "max. PAR (umol_m2_s)" "CO2 (ppm)" \
+            --batch_size 4 \
             --num_data 6500 \
             --patience 30 \
             --train_epochs 100 \
@@ -29,8 +29,8 @@ do
             --pct_start 0.3 \
             --lradj 'type3' \
             --use_gpu True \
-            --devices '0,1' \
+            --devices '0' \
             --gpu 0 \
-            --use_multi_gpu
+            #--use_multi_gpu
 
 done
