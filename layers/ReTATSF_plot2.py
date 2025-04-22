@@ -6,6 +6,7 @@ from torch import nn
 from utils.Positional_Embedding import positional_encoding
 from utils.Coherence_Compute import vectorized_compute_coherence
 from sentence_transformers import SentenceTransformer
+from utils.attentionmap import AttentionMapExtractor
 
 # class TS_CoherAnalysis():
 #     def __init__(self):
@@ -216,63 +217,67 @@ class AggregationLayer(nn.Module):
         x = x.reshape(B, C_Tmul_K_Tplus1_, L, D)
         return x
 
-# class QueryTextencoder(nn.Module):
-#     def __init__(self):
-#         super(QueryTextencoder, self).__init__()
-#         BERT_model = 'paraphrase-MiniLM-L6-v2'  # 'all-mpnet-base-v2'
-#         self.model = SentenceTransformer(BERT_model)
-#     def forward(self, Query):
-#         query_emb = self.model(Query)#Query [B, 1, D]
-#         return query_emb
+class QueryTextencoder(nn.Module):
+    def __init__(self):
+        super(QueryTextencoder, self).__init__()
+        BERT_model = 'paraphrase-MiniLM-L6-v2'  # 'all-mpnet-base-v2'
+        self.model = SentenceTransformer(BERT_model)
+    def forward(self, Query):
+        query_emb = self.model(Query)#Query [B, 1, D]
+        return query_emb
 
-# class TextCrossAttention(nn.Module):
-#     def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
-#         super(TextCrossAttention, self).__init__()
-#         self.K_n = configs.nref_text
-#         self.pred_len = configs.pred_len
-#         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
-#                                                          nhead=n_heads,
-#                                                          dropout=dropout,
-#                                                          dim_feedforward=nd_embedding_dim * 4,
-#                                                          activation='gelu',
-#                                                          batch_first=True,
-#                                                          norm_first=True)
-#         norm_layer = nn.LayerNorm(nd_embedding_dim, eps=1e-5)
-#         self.cross_encoder = nn.TransformerDecoder(cross_encoder_layer, cross_layer, norm=norm_layer)
-#
-#         self_encoder_layer = nn.TransformerDecoderLayer(d_model=qt_embedding_dim,
-#                                                         nhead=n_heads,
-#                                                         dropout=dropout,
-#                                                         dim_feedforward=qt_embedding_dim * 4,
-#                                                         activation='gelu',
-#                                                         batch_first=True,
-#                                                         norm_first=True)
-#         self_norm_layer = nn.LayerNorm(qt_embedding_dim, eps=1e-5)
-#         self.self_encoder = nn.TransformerDecoder(self_encoder_layer, self_layer, norm=self_norm_layer)
-#
-#         for p in self.cross_encoder.parameters():
-#             if p.dim() > 1:
-#                 nn.init.xavier_uniform_(p)
-#         for p in self.self_encoder.parameters():
-#             if p.dim() > 1:
-#                 nn.init.xavier_uniform_(p)
+class TextCrossAttention(nn.Module):
+    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
+        super(TextCrossAttention, self).__init__()
+        self.K_n = configs.nref_text
+        self.pred_len = configs.pred_len
+        cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
+                                                         nhead=n_heads,
+                                                         dropout=dropout,
+                                                         dim_feedforward=nd_embedding_dim * 4,
+                                                         activation='gelu',
+                                                         batch_first=True,
+                                                         norm_first=True)
+        norm_layer = nn.LayerNorm(nd_embedding_dim, eps=1e-5)
+        self.cross_encoder = nn.TransformerDecoder(cross_encoder_layer, cross_layer, norm=norm_layer)
 
-    # def forward(self, qt_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
-    #     ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, C_T*K_n, H, D]
-    #     B, C_T, H, D = qt_emb.shape
-    #     _, C_TmulK_n, _, _ = ref_news_embed.shape
-    #
-    #     qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*C_T*self.K_n, H, D)
-    #     ref_news_embed = ref_news_embed.reshape(B*C_TmulK_n, H, D)
-    #     #print('右下Q: ', qt_emb)
-    #     #print('右下KV: ', ref_news_embed)
-    #
-    #     result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
-    #     result = self.self_encoder(tgt=result, memory=result)#[B*C_T*K_n, H, D]
-    #
-    #     result = result.view(B, C_T*self.K_n, -1, D)
-    #
-    #     return result
+        self_encoder_layer = nn.TransformerDecoderLayer(d_model=qt_embedding_dim,
+                                                        nhead=n_heads,
+                                                        dropout=dropout,
+                                                        dim_feedforward=qt_embedding_dim * 4,
+                                                        activation='gelu',
+                                                        batch_first=True,
+                                                        norm_first=True)
+        self_norm_layer = nn.LayerNorm(qt_embedding_dim, eps=1e-5)
+        self.self_encoder = nn.TransformerDecoder(self_encoder_layer, self_layer, norm=self_norm_layer)
+
+        for p in self.cross_encoder.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+        for p in self.self_encoder.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+        # 注册 hook 提取 attention map
+        self.attn_extractor = AttentionMapExtractor()
+        self.attn_extractor.register_hooks(self.cross_encoder)
+
+    def forward(self, qt_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
+        ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, C_T*K_n, H, D]
+        B, C_T, H, D = qt_emb.shape
+        _, C_TmulK_n, _, _ = ref_news_embed.shape
+
+        qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*C_T*self.K_n, H, D)
+        ref_news_embed = ref_news_embed.reshape(B*C_TmulK_n, H, D)
+        #print('右下Q: ', qt_emb)
+        #print('右下KV: ', ref_news_embed)
+
+        result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
+        result = self.self_encoder(tgt=result, memory=result)#[B*C_T*K_n, H, D]
+
+        result = result.view(B, C_T*self.K_n, -1, D)
+
+        return result
 
     # def retrival(self, qt_emb, nd_emb):
     #     # 输入维度:
@@ -304,44 +309,44 @@ class AggregationLayer(nn.Module):
     #
     #     # 压缩 K 维度 (若 K=1)
     #     return selected.squeeze(1) if K == 1 else selected
-    # def retrival(self, qt_emb, nd_emb):
-    #     # 输入维度:
-    #     # qt_emb: [B, C_T, H, D]
-    #     # nd_emb: [B, N, M, D]
-    #
-    #     B, C_T, H, D = qt_emb.shape
-    #     _, N, M, _ = nd_emb.shape
-    #
-    #     # 对 qt_emb 进行 Min-Max 归一化到 [-1, 1]
-    #     qt_min = qt_emb.min(dim=-1, keepdim=True)[0]
-    #     qt_max = qt_emb.max(dim=-1, keepdim=True)[0]
-    #     qt_emb_minmax = 2 * (qt_emb - qt_min) / (qt_max - qt_min + 1e-8) - 1
-    #
-    #     # 对 nd_emb 进行 Min-Max 归一化到 [-1, 1]
-    #     nd_min = nd_emb.min(dim=-1, keepdim=True)[0]
-    #     nd_max = nd_emb.max(dim=-1, keepdim=True)[0]
-    #     nd_emb_minmax = 2 * (nd_emb - nd_min) / (nd_max - nd_min + 1e-8) - 1
-    #
-    #     # 计算相似度矩阵 [B, C_T, H, N]
-    #     similarity = torch.matmul(qt_emb_minmax.transpose(1, 2), nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
-    #
-    #     # 取 Top-Kn 相似度索引 [B, C_T, H, Kn]
-    #     _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
-    #
-    #     # 生成索引模板 [B, C_T, H, Kn, 1, 1] -> 扩展到 [B, C_T, H, Kn, M, D]
-    #     expand_dims = (B, C_T, H, self.K_n, M, D)
-    #     topk_indices = topk_indices.view(B, C_T, H, self.K_n, 1, 1).expand(expand_dims)
-    #
-    #     # 从 nd_emb 收集结果 [B, C_T, H, Kn, M, D]
-    #     selected = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, C_T, self.pred_len, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
-    #         dim=3,  # 在 N 维度上收集
-    #         index=topk_indices
-    #     )
-    #
-    #     # 重新排列维度以获得 [B, C_T, K_n, H, D]
-    #     selected = selected.squeeze(-2).permute(0, 1, 3, 2, 4)  # [B, C_T, K_n, H, D]
-    #
-    #     return selected.reshape(B, C_T*self.K_n, H, D)
+    def retrival(self, qt_emb, nd_emb):
+        # 输入维度:
+        # qt_emb: [B, C_T, H, D]
+        # nd_emb: [B, N, M, D]
+
+        B, C_T, H, D = qt_emb.shape
+        _, N, M, _ = nd_emb.shape
+
+        # 对 qt_emb 进行 Min-Max 归一化到 [-1, 1]
+        qt_min = qt_emb.min(dim=-1, keepdim=True)[0]
+        qt_max = qt_emb.max(dim=-1, keepdim=True)[0]
+        qt_emb_minmax = 2 * (qt_emb - qt_min) / (qt_max - qt_min + 1e-8) - 1
+
+        # 对 nd_emb 进行 Min-Max 归一化到 [-1, 1]
+        nd_min = nd_emb.min(dim=-1, keepdim=True)[0]
+        nd_max = nd_emb.max(dim=-1, keepdim=True)[0]
+        nd_emb_minmax = 2 * (nd_emb - nd_min) / (nd_max - nd_min + 1e-8) - 1
+
+        # 计算相似度矩阵 [B, C_T, H, N]
+        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2), nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
+
+        # 取 Top-Kn 相似度索引 [B, C_T, H, Kn]
+        _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
+
+        # 生成索引模板 [B, C_T, H, Kn, 1, 1] -> 扩展到 [B, C_T, H, Kn, M, D]
+        expand_dims = (B, C_T, H, self.K_n, M, D)
+        topk_indices = topk_indices.view(B, C_T, H, self.K_n, 1, 1).expand(expand_dims)
+
+        # 从 nd_emb 收集结果 [B, C_T, H, Kn, M, D]
+        selected = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, C_T, self.pred_len, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
+            dim=3,  # 在 N 维度上收集
+            index=topk_indices
+        )
+
+        # 重新排列维度以获得 [B, C_T, K_n, H, D]
+        selected = selected.squeeze(-2).permute(0, 1, 3, 2, 4)  # [B, C_T, K_n, H, D]
+
+        return selected.reshape(B, C_T*self.K_n, H, D)
 
 class CrossandOutput(nn.Module):
     def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3, TS_attn_layer=3):
@@ -388,17 +393,19 @@ class CrossandOutput(nn.Module):
 
         self.dimension_reducer = DimensionReducer(configs)
 
+        # 注册 hook 提取 attention map
+        self.attn_extractor = AttentionMapExtractor()
+        self.attn_extractor.register_hooks(self.cross_encoder)
+
         # 输出线性网络
         self.mlp = nn.Sequential(
             nn.Linear(temp_embedding_dim, temp_embedding_dim * 4),
             nn.ReLU(),
             nn.Linear(temp_embedding_dim * 4, 1)
         )
-        self.H = configs.pred_len
 
-    def forward(self, temp_emb):#text_emb[B, C_T*K_n, H, D] temp_emb[B, C_T*(K_T+1), L, D]
+    def forward(self, text_emb, temp_emb):#text_emb[B, C_T*K_n, H, D] temp_emb[B, C_T*(K_T+1), L, D]
         B, C_Tmul_K_Tplus1_, L, D_temp = temp_emb.shape #C=K_temp_plus1
-        text_emb = torch.zeros(B, C_Tmul_K_Tplus1_, self.H, D_temp, device=temp_emb.device)
         _, _, H, D_text = text_emb.shape#C=K_text
 
         text_emb = torch.cat((temp_emb, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]

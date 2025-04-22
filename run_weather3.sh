@@ -6,9 +6,9 @@ do
             --is_training 1 \
             --root_path './dataset' \
             --TS_data_path 'Weather_captioned/weather_2014-18_nc.parquet' \
-            --QT_data_path 'QueryTextPackage.parquet' \
-            --QT_emb_path 'QueryText-embedding-paraphrase-MiniLM-L6-v2' \
-            --NewsDatabase_path 'NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
+            --QT_data_path 'Weather_captioned/QueryTextPackage.parquet' \
+            --QT_emb_path 'Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2' \
+            --NewsDatabase_path 'Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './M_checkpoints/' \
             --target_ids "wd (deg)" "raining (s)" "SWDR (W_m2)" "PAR (umol_m2_s)" "max. PAR (umol_m2_s)" "CO2 (ppm)" \

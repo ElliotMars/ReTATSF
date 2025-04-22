@@ -1,18 +1,18 @@
 export CUDA_VISIBLE_DEVICES=1
-for pred_len in 60 120
+for pred_len in 120
 do
     python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
             --random_seed 2025 \
             --is_training 1 \
             --root_path './dataset' \
             --TS_data_path 'Weather_captioned/weather_2014-18_nc.parquet' \
-            --QT_data_path 'QueryTextPackage.parquet' \
-            --QT_emb_path 'QueryText-embedding-paraphrase-MiniLM-L6-v2' \
-            --NewsDatabase_path 'NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
+            --QT_data_path 'Weather_captioned/QueryTextPackage.parquet' \
+            --QT_emb_path 'Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2' \
+            --NewsDatabase_path 'Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './M_checkpoints/' \
-            --target_ids "Tdew (degC)" "VPact (mbar)" "VPdef (mbar)" "sh (g_kg)" "H2OC (mmol_mol)" "rho (g_m**3)" "max. wv (m_s)" "rain (mm)" \
-            --batch_size 8 \
+            --target_ids "Tdew (degC)" "VPact (mbar)" "VPdef (mbar)" \
+            --batch_size 32 \
             --num_data 6500 \
             --patience 30 \
             --train_epochs 100 \
@@ -32,5 +32,5 @@ do
             --devices '0' \
             --gpu 0 \
             #--use_multi_gpu
-
+            #"sh (g_kg)" "H2OC (mmol_mol)" "rho (g_m**3)" "max. wv (m_s)" "rain (mm)" \
 done

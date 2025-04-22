@@ -29,4 +29,4 @@ physical_quantities = {
 df = pd.DataFrame(physical_quantities)
 
 # 存储为 Parquet 文件
-df.to_parquet("../dataset/QueryTextPackage.parquet", engine="pyarrow")
+df.to_parquet("../../dataset/QueryTextPackage.parquet", engine="pyarrow")

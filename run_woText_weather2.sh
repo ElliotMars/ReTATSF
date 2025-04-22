@@ -1,14 +1,14 @@
 export CUDA_VISIBLE_DEVICES=3
 for pred_len in 14 28 60 120
 do
-    python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
+    python /data/dyl/ReTATSF/run_ReTATSFwoText_weather.py \
             --random_seed 2025 \
             --is_training 1 \
             --root_path './dataset' \
             --TS_data_path 'Weather_captioned/weather_2014-18_nc.parquet' \
-            --QT_data_path 'QueryTextPackage.parquet' \
-            --QT_emb_path 'QueryText-embedding-paraphrase-MiniLM-L6-v2' \
-            --NewsDatabase_path 'NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
+            --QT_data_path 'Weather_captioned/QueryTextPackage.parquet' \
+            --QT_emb_path 'Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2' \
+            --NewsDatabase_path 'Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './M_woText_checkpoints/' \
             --target_ids "Tdew (degC)" "VPact (mbar)" "VPdef (mbar)" "H2OC (mmol_mol)" "rho (g_m**3)" "max. wv (m_s)" "rain (mm)" \

@@ -1,6 +1,6 @@
 import argparse
 import torch
-from exp.exp_ReTATSFwoText_weather import Exp_Main
+from exp.exp_ReTATSF_weather_plot2 import Exp_Main
 import random
 import numpy as np
 import multiprocessing

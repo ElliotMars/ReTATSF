@@ -1,9 +1,9 @@
 from exp.exp_basic import Exp_Basic
-from models import ReTATSFwoText
+from models import ReTATSF_plot2
 import torch
 from torch import nn
 from torch import optim
-from data_provider.data_factorywoText import ReTATSF_weather_data_provider
+from data_provider.data_factory import ReTATSF_weather_data_provider
 import time
 import numpy as np
 import os
@@ -16,7 +16,7 @@ class Exp_Main(Exp_Basic):
         super(Exp_Main, self).__init__(args)
 
     def _build_model(self):
-        model = ReTATSFwoText.Model(self.args).float()
+        model = ReTATSF_plot2.Model(self.args).float()
 
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
@@ -41,16 +41,16 @@ class Exp_Main(Exp_Basic):
         total_time = 0
         with torch.no_grad():
             for i, (batch_target_series_x, batch_target_series_y,
-                    batch_TS_database) in enumerate(vali_loader):
+                    batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(vali_loader):
                 batch_target_series_x = batch_target_series_x.float().to(self.device)
                 batch_target_series_y = batch_target_series_y.float().to(self.device)
                 batch_TS_database = batch_TS_database.float().to(self.device)
-                # batch_qt = batch_qt.float().to(self.device)
-                # batch_newsdatabase = batch_newsdatabase.float().to(self.device)
+                batch_qt = batch_qt.float().to(self.device)
+                batch_newsdatabase = batch_newsdatabase.float().to(self.device)
 
                 time_now = time.time()
 
-                outputs = self.model(batch_target_series_x, batch_TS_database)#, batch_qt, batch_newsdatabase)
+                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 
                 total_time += time.time() - time_now
 
@@ -105,19 +105,19 @@ class Exp_Main(Exp_Basic):
 
             iterstage_time = time.time()
             for i, (batch_target_series_x, batch_target_series_y,
-                    batch_TS_database) in enumerate(train_loader):
+                    batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(train_loader):
                 iter_count += 1
                 model_optim.zero_grad()
                 batch_target_series_x = batch_target_series_x.float().to(self.device)
                 batch_target_series_y = batch_target_series_y.float().to(self.device)
 
                 batch_TS_database = batch_TS_database.float().to(self.device)
-                # batch_qt = batch_qt.float().to(self.device)
-                # batch_newsdatabase = batch_newsdatabase.float().to(self.device)
+                batch_qt = batch_qt.float().to(self.device)
+                batch_newsdatabase = batch_newsdatabase.float().to(self.device)
                 # print('batch_target_series_x: ', batch_target_series_x)
                 # print('batch_target_series_y: ', batch_target_series_y)
 
-                outputs = self.model(batch_target_series_x, batch_TS_database)#, batch_qt, batch_newsdatabase)
+                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 
                 loss = criterion(outputs, batch_target_series_y)
                 train_loss.append(loss.item())
@@ -161,7 +161,7 @@ class Exp_Main(Exp_Basic):
     def test(self, setting, test=0):
         print(f"Test for {setting}")
         setting = time.strftime("%m%d_%H%M%S_", time.localtime()) + setting
-        folder_path = './M_woText_test_results/' + setting + '/'
+        folder_path = './M_test_results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
@@ -173,7 +173,7 @@ class Exp_Main(Exp_Basic):
             print('loading model')
             self.model.load_state_dict(torch.load(
                 #os.path.join(self.args.checkpoints, "0311_223330_" + setting + "/p (mbar)_best_checkpoint.pth")
-                os.path.join(self.args.checkpoints, "M_woText_checkpoints/0413_163037_Target_p (mbar)-Tlog (degC) SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_8/p (mbar)T (degC)Tpot (K)rh (%)VPmax (mbar)wv (m_s)sh (g_kg)Tlog (degC)_best_checkpoint.pth")
+                os.path.join(self.args.checkpoints, "/data/dyl/ReTATSF/M_checkpoints/0402_171105_Target_p (mbar)-Tlog (degC) SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_12/p (mbar)T (degC)rh (%)VPmax (mbar)wv (m_s)sh (g_kg)Tlog (degC)_best_checkpoint.pth")
             ))
 
         if self.args.test_flop:
@@ -187,15 +187,18 @@ class Exp_Main(Exp_Basic):
         self.model.eval()
         with torch.no_grad():
             for i, (batch_target_series_x, batch_target_series_y,
-                    batch_TS_database) in enumerate(test_loader):
+                    batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(test_loader):
                 batch_target_series_x = batch_target_series_x.float().to(self.device)
                 batch_target_series_y = batch_target_series_y.float().to(self.device)
 
                 batch_TS_database = batch_TS_database.float().to(self.device)
-                # batch_qt = batch_qt.float().to(self.device)
-                # batch_newsdatabase = batch_newsdatabase.float().to(self.device)
+                batch_qt = batch_qt.float().to(self.device)
+                batch_newsdatabase = batch_newsdatabase.float().to(self.device)
 
-                outputs = self.model(batch_target_series_x, batch_TS_database)#, batch_qt, batch_newsdatabase)
+                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
+                # 可视化第0层、第0个head、第0个样本的 cross-attention map
+                for i in range(8):
+                    self.model.CrossandOutput.attn_extractor.visualize(layer_idx=0, batch_idx=i, head_idx=0)
 
                     # outputs = outputs.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
                     # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]

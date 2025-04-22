@@ -6,8 +6,8 @@ import random
 seed = 2025
 random.seed(seed)
 
-root_path = '/data/dyl/ReTATSF'
-data_path = 'dataset/Weather_captioned'
+root_path = '../../dataset'
+data_path = 'Weather_captioned'
 
 
 def adjust_list_lengths(decoded_data, target_length=7):
@@ -28,16 +28,16 @@ def adjust_list_lengths(decoded_data, target_length=7):
         adjusted_data[key] = adjusted_list
     return adjusted_data
 
-with open(os.path.join(root_path, data_path, 'hashtable.json'), 'r', encoding='utf-8') as f:
+with open(os.path.join(root_path, data_path, 'hashtable_large.json'), 'r', encoding='utf-8') as f:
     hashtable = json.load(f)
 
-with open(os.path.join(root_path, data_path, 'wm_messages_v1.json'), 'r', encoding='utf-8') as f:
+with open(os.path.join(root_path, data_path, 'wm_messages_large_v1.json'), 'r', encoding='utf-8') as f:
     wm_messages_v1 = json.load(f)
 
-with open(os.path.join(root_path, data_path, 'wm_messages_v2.json'), 'r', encoding='utf-8') as f:
+with open(os.path.join(root_path, data_path, 'wm_messages_large_v2.json'), 'r', encoding='utf-8') as f:
     wm_messages_v2 = json.load(f)
 
-with open(os.path.join(root_path, data_path, 'wm_messages_v3.json'), 'r', encoding='utf-8') as f:
+with open(os.path.join(root_path, data_path, 'wm_messages_large_v3.json'), 'r', encoding='utf-8') as f:
     wm_messages_v3 = json.load(f)
 
 
@@ -61,7 +61,7 @@ decoded_data = {date: random.choice([decoded_data_v1[date], decoded_data_v2[date
 
 decoded_data = adjust_list_lengths(decoded_data)
 decoded_data = pd.DataFrame(decoded_data)
-decoded_data.to_parquet('../dataset/weather_claim_data.parquet', engine='pyarrow')
+decoded_data.to_parquet('../../dataset/weather_claim_data_large.parquet', engine='pyarrow')
 
 
 

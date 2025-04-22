@@ -13,7 +13,7 @@ args = parser.parse_args()
 target_id = args.target_id
 
 BERT_model = 'paraphrase-MiniLM-L6-v2'
-save_dir = f'../dataset/QueryText-embedding-{BERT_model}/{target_id}'
+save_dir = f'../../dataset/QueryText-embedding-{BERT_model}/{target_id}'
 os.makedirs(save_dir, exist_ok=True)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -22,7 +22,7 @@ model = SentenceTransformer(BERT_model).to(device)
 BATCH_SIZE = 32768
 ENCODE_BATCH = 8192
 
-df = pd.read_parquet('../dataset/Weather_captioned/weather_2014-18_nc.parquet')
+df = pd.read_parquet('../../dataset/Weather_captioned/weather_2014-18_nc.parquet')
 time_span = df['Date Time'].tolist()
 # 转换时间格式
 time_span = [
@@ -31,7 +31,7 @@ time_span = [
 ]
 
 
-des = pd.read_parquet('../dataset/QueryTextPackage.parquet')
+des = pd.read_parquet('../../dataset/QueryTextPackage.parquet')
 
 # 主进度条
 pbar = tqdm.tqdm(total=len(time_span), desc="Encoding")
