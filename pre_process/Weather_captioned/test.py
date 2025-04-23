@@ -1,7 +1,7 @@
 # import pandas as pd
 #
 # # 读取 Parquet 文件
-# df = pd.read_parquet("../../dataset/weather_claim_data.parquet")
+# df = pd.read_parquet("../../dataset/Weather_captioned/weather_claim_data.parquet")
 #
 # # 打印 DataFrame
 # print(df)
@@ -9,7 +9,7 @@
 # import numpy as np
 #
 # # 读取 .npy 文件
-# data = np.load("../../dataset/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2/News-2018-03-06 06:00:00.npy")
+# data = np.load("../../dataset/Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2/News-2018-03-06 06:00:00.npy")
 #
 # # 输出数据
 # print(data)
@@ -63,7 +63,7 @@
 # import numpy as np
 #
 # # 指定目录路径
-# directory = '../../dataset/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2'
+# directory = '../../dataset/Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2'
 #
 # # 获取目录下所有的 .npy 文件
 # npy_files = [f for f in os.listdir(directory) if f.endswith('.npy')]
@@ -95,7 +95,7 @@
 # device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # model = SentenceTransformer(BERT_model).to(device)
 #
-# df = pd.read_parquet("../../dataset/QueryTextPackage.parquet")
+# df = pd.read_parquet("../../dataset/Weather_captioned/QueryTextPackage.parquet")
 # #print(df)
 # # df_TS_timespan = pd.read_parquet("../../dataset/Weather_captioned/weather_2014-18.parquet")
 # # print(df_TS_timespan)

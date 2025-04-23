@@ -1,5 +1,5 @@
 export CUDA_VISIBLE_DEVICES=1
-for pred_len in 120
+for pred_len in 14 28 60 120
 do
     python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
             --random_seed 2025 \
@@ -11,8 +11,8 @@ do
             --NewsDatabase_path 'Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './M_checkpoints/' \
-            --target_ids "Tdew (degC)" "VPact (mbar)" "VPdef (mbar)" \
-            --batch_size 32 \
+            --target_ids "max. wv (m_s)" \
+            --batch_size 128 \
             --num_data 6500 \
             --patience 30 \
             --train_epochs 100 \

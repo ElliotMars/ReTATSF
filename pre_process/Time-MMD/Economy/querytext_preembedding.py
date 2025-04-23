@@ -13,25 +13,19 @@ args = parser.parse_args()
 target_id = args.target_id
 
 BERT_model = 'paraphrase-MiniLM-L6-v2'
-save_dir = f'../../dataset/Weather_captioned/QueryText-embedding-{BERT_model}/{target_id}'
+save_dir = f'../../../dataset/Time-MMD/textual/Economy/QueryText-embedding-{BERT_model}/{target_id}'
 os.makedirs(save_dir, exist_ok=True)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = SentenceTransformer(BERT_model).to(device)
 
-BATCH_SIZE = 32768
-ENCODE_BATCH = 8192
+BATCH_SIZE = 64
+ENCODE_BATCH = 32
 
-df = pd.read_parquet('../../dataset/Weather_captioned/weather_2014-18_nc.parquet')
-time_span = df['Date Time'].tolist()
-# 转换时间格式
-time_span = [
-    datetime.strptime(t, "%d.%m.%Y %H:%M:%S").strftime("%Y-%m-%d %H:%M:%S")
-    for t in time_span
-]
+df = pd.read_parquet('../../../dataset/Time-MMD/numerical/Economy/Economy.parquet')
+time_span = df['Date'].tolist()
 
-
-des = pd.read_parquet('../../dataset/Weather_captioned/QueryTextPackage.parquet')
+des = pd.read_parquet('../../../dataset/Time-MMD/textual/Economy/QueryTextPackage.parquet')
 
 # 主进度条
 pbar = tqdm.tqdm(total=len(time_span), desc="Encoding")
@@ -49,7 +43,7 @@ for t in time_span:
         qts_embedding = qts_embedding / np.linalg.norm(qts_embedding, axis=1, keepdims=True)
 
         for i in range(len(qts)):
-            np.save(os.path.join(save_dir, qts_keys[i][:19] + target_id + '.npy'), qts_embedding[i:i + 1])
+            np.save(os.path.join(save_dir, qts_keys[i][:10] + target_id + '.npy'), qts_embedding[i:i + 1])
 
         pbar.update(len(qts))
         qts = []
@@ -61,7 +55,7 @@ if qts:
     qts_embedding = qts_embedding / np.linalg.norm(qts_embedding, axis=1, keepdims=True)
 
     for i in range(len(qts)):
-        np.save(os.path.join(save_dir, qts_keys[i][:19] + target_id + '.npy'), qts_embedding[i:i + 1])
+        np.save(os.path.join(save_dir, qts_keys[i][:10] + target_id + '.npy'), qts_embedding[i:i + 1])
     pbar.update(len(qts))
 
 pbar.close()

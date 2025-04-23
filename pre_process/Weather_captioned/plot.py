@@ -358,3 +358,85 @@
 # plt.axis('off')
 # plt.tight_layout()
 # plt.show()
+#————————————————————————————————————————————————————————————————————————————————————
+# import numpy as np
+# import os
+# from datetime import datetime
+#
+# start_time = "201401010000"
+# end_time = "201501010000"
+# start_time = datetime.strptime(start_time, "%Y%m%d%H%M")
+# end_time = datetime.strptime(end_time, "%Y%m%d%H%M")
+#
+# qt_example = np.load('../../dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2014-01-01 07:10:00p (mbar).npy')
+# directory_nd = '../../dataset/Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2'
+# # 遍历目录，筛选符合时间范围的 .npy 文件
+# npy_files = []
+# for f in os.listdir(directory_nd):
+#     if not f.endswith('.npy'):
+#         continue
+#
+#     # 提取文件名中的时间部分（如 "News-2016-10-20 00:00:00.npy" → "2016-10-20 00:00:00"）
+#     time_part = f.replace("News-", "").replace(".npy", "")
+#     file_time = datetime.strptime(time_part, "%Y-%m-%d %H:%M:%S")
+#
+#     # 检查是否在时间范围内
+#     if start_time <= file_time <= end_time:
+#         npy_files.append(f)
+#
+# # 按文件名排序（确保时间顺序正确）
+# npy_files.sort()
+#
+# # 加载所有符合条件的 .npy 文件
+# for npy_file in npy_files:
+#     #print(npy_file)
+#     file_path = os.path.join(directory_nd, npy_file)
+#     array = np.load(file_path)
+
+import numpy as np
+import os
+from datetime import datetime
+
+# 时间解析
+start_time = "201401010000"
+end_time = "201501010000"
+start_time = datetime.strptime(start_time, "%Y%m%d%H%M")
+end_time = datetime.strptime(end_time, "%Y%m%d%H%M")
+
+# 查询文本向量
+qt_example = np.load('/data/dyl/ReTATSF/dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2014-03-24 02:50:00p (mbar).npy')
+qt_example = qt_example / np.linalg.norm(qt_example)  # 归一化
+
+# 新闻数据库路径
+directory_nd = '../../dataset/Weather_captioned/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2'
+
+# 遍历目录，筛选符合时间范围的 .npy 文件
+similarities = []
+for f in os.listdir(directory_nd):
+    if not f.endswith('.npy'):
+        continue
+
+    try:
+        time_part = f.replace("News-", "").replace(".npy", "")
+        file_time = datetime.strptime(time_part, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        print(f"跳过无效文件名格式: {f}")
+        continue
+
+    if start_time <= file_time <= end_time:
+        file_path = os.path.join(directory_nd, f)
+        array = np.load(file_path)
+
+        # 归一化 array
+        array_norm = array / np.linalg.norm(array)
+        # 计算归一化点积（余弦相似度）
+        sim = np.dot(qt_example, array_norm.reshape(-1))
+
+        similarities.append((f, sim))
+
+# 根据相似度排序，取前5
+top_5 = sorted(similarities, key=lambda x: x[1], reverse=True)[:5]
+
+print("相似度最高的5个文件：")
+for filename, score in top_5:
+    print(f"{filename} 相似度: {float(score):.4f}")

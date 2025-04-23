@@ -7,14 +7,14 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 
 BERT_model= 'paraphrase-MiniLM-L6-v2' #'all-mpnet-base-v2'
-save_dir='../../dataset/NewsDatabase-embedding-' + BERT_model
+save_dir='../../dataset/Weather_captioned/NewsDatabase-embedding-' + BERT_model
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = SentenceTransformer(BERT_model).to(device)
 
-df = pd.read_parquet("../../dataset/weather_claim_data.parquet")
+df = pd.read_parquet("../../dataset/Weather_captioned/weather_claim_data.parquet")
 # 处理函数：将每列的 7 行值拼接成一个字符串
 def concatenate_column(col):
     return " ".join(col)

@@ -61,7 +61,7 @@ decoded_data = {date: random.choice([decoded_data_v1[date], decoded_data_v2[date
 
 decoded_data = adjust_list_lengths(decoded_data)
 decoded_data = pd.DataFrame(decoded_data)
-decoded_data.to_parquet('../../dataset/weather_claim_data.parquet', engine='pyarrow')
+decoded_data.to_parquet('../../dataset/Weather_captioned/weather_claim_data.parquet', engine='pyarrow')
 
 
 

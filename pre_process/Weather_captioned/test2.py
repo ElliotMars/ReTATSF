@@ -35,7 +35,7 @@
 # print(a)
 #-------------------------------------------------------------------------------
 # import pandas as pd
-# df_raw = pd.read_parquet('../../dataset/weather_claim_data.parquet')
+# df_raw = pd.read_parquet('../../dataset/Weather_captioned/weather_claim_data.parquet')
 # # new_columns = ["Date Time", "p (mbar)", "T (degC)", "Tpot (K)", "Tdew (degC)", "rh (%)", "VPmax (mbar)", "VPact (mbar)", "VPdef (mbar)", "sh (g/kg)", "H2OC (mmol/mol)", "rho (g/m**3)", "wv (m/s)", "max. wv (m/s)", "wd (deg)", "rain (mm)", "raining (s)", "SWDR (W/m2)", "PAR (umol/m2/s)", "max. PAR (umol/m2/s)", "Tlog (degC)", "CO2 (ppm)"]
 # # df_raw.columns = new_columns
 # # df_raw.to_parquet("../../dataset/Weather_captioned/weather_2014-18_nc.parquet", engine="pyarrow")
@@ -46,7 +46,7 @@
 # print(df)
 #-------------------------------------------------------------------------------
 import numpy as np
-a = np.load('../../dataset/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2019-01-01 00:00:00p (mbar).npy')
+a = np.load('../../dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2019-01-01 00:00:00p (mbar).npy')
 print(a)
 print(a.shape)
 #-------------------------------------------------------------------------------
@@ -79,6 +79,6 @@ print(a.shape)
 #     print(f"Remaining files: {remaining_files}")
 #
 # # 使用示例
-# directory = '../../dataset/QueryText-embedding-paraphrase-MiniLM-L6-v2'  # 替换为目标目录路径
+# directory = '../../dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2'  # 替换为目标目录路径
 # target_string = 'T (degC)'  # 替换为你要查找的字符串
 # delete_files_with_string(directory, target_string)
