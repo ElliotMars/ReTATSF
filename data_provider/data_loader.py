@@ -274,7 +274,7 @@ class Dataset_ReTATSF_Economy(Dataset):
         self.num_data = int(original_rows * self.num_data)
 
         # 计算有效起始点范围
-        max_start = original_rows - self.stride * (self.num_data - 1) - 1
+        max_start = original_rows - self.stride * (self.num_data - 1) - self.seq_len - self.pred_len
         if max_start < 0:
             raise ValueError(f"步长 {self.stride} 过大，无法抽取 {self.num_data} 行数据")
 
