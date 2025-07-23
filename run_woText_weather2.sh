@@ -1,5 +1,5 @@
-export CUDA_VISIBLE_DEVICES=3
-for pred_len in 14 28 60 120
+export CUDA_VISIBLE_DEVICES=2,7
+for pred_len in 120
 do
     python /data/dyl/ReTATSF/run_ReTATSFwoText_weather.py \
             --random_seed 2025 \
@@ -12,7 +12,7 @@ do
             --features 'M' \
             --checkpoints './M_woText_checkpoints/' \
             --target_ids "Tdew (degC)" "VPact (mbar)" "VPdef (mbar)" "H2OC (mmol_mol)" "rho (g_m**3)" "max. wv (m_s)" "rain (mm)" \
-            --batch_size 8 \
+            --batch_size 32 \
             --num_data 6500 \
             --patience 30 \
             --train_epochs 100 \
@@ -29,8 +29,8 @@ do
             --pct_start 0.3 \
             --lradj 'type3' \
             --use_gpu True \
-            --devices '0' \
+            --devices '0,1' \
             --gpu 0 \
-            #--use_multi_gpu
+            --use_multi_gpu
 
 done

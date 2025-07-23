@@ -143,6 +143,10 @@
 # coh = compute_coherence_with_freq(target, database, nperseg=64)  # [2, freq]
 # freqs = torch.fft.rfftfreq(64, d=1.0).numpy()  # 采样频率假设为1（间隔为1）
 #
+# import matplotlib
+# matplotlib.rcParams['font.family'] = 'Times New Roman'
+# matplotlib.rcParams['font.size'] = 10.5  # 小五号约为10.5 pt
+#
 # # 创建画布并进行绘制
 # fig, axs = plt.subplots(3, 1, figsize=(10, 12))  # 三个子图垂直排列
 #
@@ -160,17 +164,24 @@
 # axs[1].set_title('Coherence Between T and WV')
 # axs[1].grid(True)
 #
-# # 绘制 'RH - WV' 相干性
-# axs[2].plot(freqs, coh[1].numpy(), label='RH - WV', color='tab:green')
+# # RH-WV coherence
+# target_rh = data[:, 1:2, :]    # RH
+# database_wv = data[:, 2:, :]   # WV
+# coh_rh_wv = compute_coherence_with_freq(target_rh, database_wv, nperseg=64)
+#
+# # 清空第三个子图并绘制 RH-WV
+# axs[2].cla()
+# axs[2].plot(freqs, coh_rh_wv[0].numpy(), label='RH - WV', color='tab:green')
 # axs[2].set_xlabel('Frequency')
 # axs[2].set_ylabel('Coherence')
 # axs[2].set_title('Coherence Between RH and WV')
 # axs[2].grid(True)
 #
-# # 调整布局
+# # 调整布局并保存
 # plt.tight_layout()
 # plt.savefig('../../fig/Conherence.pdf', format='pdf', bbox_inches='tight')
 # plt.show()
+
 #————————————————————————————————————————————————————————————————————————————————————
 
 # import pandas as pd
@@ -261,10 +272,8 @@
 #
 # # Step 2: 转为 shape = [B, C, L]
 # data = data.T.unsqueeze(0)  # 转为 [1, 3, 121]
-# target = data[:, 0:1, :]    # T
-# database = data[:, 1:, :]   # rh 和 wv
 #
-# # Step 3: 计算频域相干性（不求平均）
+# # Step 3: 相干性计算函数
 # def compute_coherence_with_freq(target: torch.Tensor,
 #                                  database: torch.Tensor,
 #                                  nperseg: int = 64):
@@ -289,23 +298,30 @@
 #     coherence = (torch.abs(Pxy) ** 2) / (Pxx * Pyy + 1e-10)  # [B, C_T, C_D, freq]
 #     return coherence[0, 0]  # 明确取 B=0, C_T=0 的结果，shape: [C_D, freq]
 #
+# # Step 4: 计算各对变量的相干性
+# # T - RH
+# target_T = data[:, 0:1, :]  # T
+# database_RH = data[:, 1:2, :]  # RH
+# coh_T_RH = compute_coherence_with_freq(target_T, database_RH, nperseg=64)
+# coh_T_RH_mean = coh_T_RH[0].mean().item()
 #
-# # Step 4: 计算相干性
-# coh = compute_coherence_with_freq(target, database, nperseg=64)  # [2, freq]
-# freqs = torch.fft.rfftfreq(64, d=1.0).numpy()  # 采样频率假设为1（间隔为1）
+# # T - WV
+# database_WV = data[:, 2:3, :]  # WV
+# coh_T_WV = compute_coherence_with_freq(target_T, database_WV, nperseg=64)
+# coh_T_WV_mean = coh_T_WV[0].mean().item()
 #
-# # 计算每一对变量在不同频率上的相干性平均值
-# coh_T_RH = coh[0].mean().item()  # T 和 RH 的平均相干性
-# coh_T_WV = coh[1].mean().item()  # T 和 WV 的平均相干性
-# coh_RH_WV = coh[1].mean().item()  # RH 和 WV 的平均相干性 (使用 coh[1] 计算，因其实际代表 RH 和 WV 的相干性)
+# # RH - WV（重新设置 target 和 database）
+# target_RH = data[:, 1:2, :]
+# database_WV = data[:, 2:3, :]
+# coh_RH_WV = compute_coherence_with_freq(target_RH, database_WV, nperseg=64)
+# coh_RH_WV_mean = coh_RH_WV[0].mean().item()
 #
-# # 创建一个 DataFrame 展示这些值
+# # Step 5: 打印结果
 # coh_values = {
-#     'T - RH': [coh_T_RH],
-#     'T - WV': [coh_T_WV],
-#     'RH - WV': [coh_RH_WV]
+#     'T - RH': [coh_T_RH_mean],
+#     'T - WV': [coh_T_WV_mean],
+#     'RH - WV': [coh_RH_WV_mean]
 # }
-#
 # coh_df = pd.DataFrame(coh_values, index=['Mean Coherence'])
 # print(coh_df)
 #————————————————————————————————————————————————————————————————————————————————————
@@ -399,12 +415,12 @@ from datetime import datetime
 
 # 时间解析
 start_time = "201401010000"
-end_time = "201501010000"
+end_time = "201901010000"
 start_time = datetime.strptime(start_time, "%Y%m%d%H%M")
 end_time = datetime.strptime(end_time, "%Y%m%d%H%M")
 
 # 查询文本向量
-qt_example = np.load('/data/dyl/ReTATSF/dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2014-03-24 02:50:00p (mbar).npy')
+qt_example = np.load('/data/dyl/ReTATSF/dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2017-03-31 14:10:00p (mbar).npy')
 qt_example = qt_example / np.linalg.norm(qt_example)  # 归一化
 
 # 新闻数据库路径

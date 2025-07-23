@@ -1,6 +1,6 @@
 import numpy as np
-trues = np.load("/data/dyl/ReTATSF/M_test_results/0422_183958_Target_Tdew (degC)-VPdef (mbar) SeqLen_60 PredLen_120 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_32/Tdew (degC)VPact (mbar)VPdef (mbar)_trues.npy")
-preds = np.load("/data/dyl/ReTATSF/M_test_results/0422_183958_Target_Tdew (degC)-VPdef (mbar) SeqLen_60 PredLen_120 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_32/Tdew (degC)VPact (mbar)VPdef (mbar)_pred.npy")
+trues = np.load("/data/dyl/ReTATSF/M_test_results/0721_221645_Target_Exports-International Trade Balance SeqLen_20 PredLen_40 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_32/ExportsImportsInternational Trade Balance_trues.npy")
+preds = np.load("/data/dyl/ReTATSF/M_test_results/0721_221645_Target_Exports-International Trade Balance SeqLen_20 PredLen_40 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_32/ExportsImportsInternational Trade Balance_pred.npy")
 #inputx = np.load('./M_test_results/0405_002535_Target_p (mbar)-Tlog (degC) SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_128/p (mbar)T (degC)rh (%)VPmax (mbar)wv (m_s)sh (g_kg)Tlog (degC)_x.npy')
 
 print(trues.shape)

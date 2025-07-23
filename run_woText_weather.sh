@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=1,2,3,4
+export CUDA_VISIBLE_DEVICES=0
 for pred_len in 14 28 60 120
 do
     python /data/dyl/ReTATSF/run_ReTATSFwoText_weather.py \
@@ -29,8 +29,8 @@ do
             --pct_start 0.3 \
             --lradj 'type3' \
             --use_gpu True \
-            --devices '0,1,2,3' \
+            --devices '0' \
             --gpu 0 \
-            --use_multi_gpu
+            #--use_multi_gpu
 
 done

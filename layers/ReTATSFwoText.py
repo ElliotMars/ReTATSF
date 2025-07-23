@@ -398,7 +398,9 @@ class CrossandOutput(nn.Module):
 
     def forward(self, temp_emb):#text_emb[B, C_T*K_n, H, D] temp_emb[B, C_T*(K_T+1), L, D]
         B, C_Tmul_K_Tplus1_, L, D_temp = temp_emb.shape #C=K_temp_plus1
-        text_emb = torch.zeros(B, C_Tmul_K_Tplus1_, self.H, D_temp, device=temp_emb.device)
+        #text_emb = torch.zeros(B, C_Tmul_K_Tplus1_, self.H, D_temp, device=temp_emb.device)
+        text_emb = torch.randn(B, C_Tmul_K_Tplus1_, self.H, D_temp, device=temp_emb.device)
+
         _, _, H, D_text = text_emb.shape#C=K_text
 
         text_emb = torch.cat((temp_emb, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]

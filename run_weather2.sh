@@ -1,5 +1,5 @@
-export CUDA_VISIBLE_DEVICES=1
-for pred_len in 14 28 60 120
+export CUDA_VISIBLE_DEVICES=2
+for pred_len in 120
 do
     python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
             --random_seed 2025 \
@@ -12,7 +12,7 @@ do
             --features 'M' \
             --checkpoints './M_checkpoints/' \
             --target_ids "max. wv (m_s)" \
-            --batch_size 128 \
+            --batch_size 64 \
             --num_data 6500 \
             --patience 30 \
             --train_epochs 100 \

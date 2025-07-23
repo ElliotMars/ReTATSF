@@ -1,5 +1,5 @@
-export CUDA_VISIBLE_DEVICES=4,7
-for pred_len in 120
+export CUDA_VISIBLE_DEVICES=4,5
+for pred_len in 60
 do
     python /data/dyl/ReTATSF/run_ReTATSF_weather.py \
             --random_seed 2025 \

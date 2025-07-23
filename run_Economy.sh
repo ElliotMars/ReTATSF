@@ -1,5 +1,5 @@
-export CUDA_VISIBLE_DEVICES=0,7
-for pred_len in 14
+export CUDA_VISIBLE_DEVICES=1,5,2,4
+for pred_len in 5 10 20 40
 do
     python /data/dyl/ReTATSF/run_ReTATSF_Economy.py \
             --random_seed 2025 \
@@ -20,7 +20,7 @@ do
             --nref 5 \
             --naggregation 3 \
             --nref_text 6 \
-            --seq_len 60 \
+            --seq_len 20 \
             --pred_len $pred_len \
             --stride 1 \
             --learning_rate 0.0001 \
@@ -29,7 +29,7 @@ do
             --pct_start 0.3 \
             --lradj 'type3' \
             --use_gpu True \
-            --devices '0,1' \
+            --devices '0,1,2,3' \
             --gpu 0 \
             --use_multi_gpu
 

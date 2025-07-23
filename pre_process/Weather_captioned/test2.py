@@ -41,14 +41,14 @@
 # # df_raw.to_parquet("../../dataset/Weather_captioned/weather_2014-18_nc.parquet", engine="pyarrow")
 # print(df_raw)
 #-------------------------------------------------------------------------------
-# import pandas as pd
-# df = pd.read_parquet('../../dataset/Weather_captioned/weather_2014-18_nc.parquet')
-# print(df)
+import pandas as pd
+df = pd.read_parquet('../../dataset/Weather_captioned/weather_2014-18_nc.parquet')
+print(df)
 #-------------------------------------------------------------------------------
-import numpy as np
-a = np.load('../../dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2019-01-01 00:00:00p (mbar).npy')
-print(a)
-print(a.shape)
+# import numpy as np
+# a = np.load('../../dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2/p (mbar)/2019-01-01 00:00:00p (mbar).npy')
+# print(a)
+# print(a.shape)
 #-------------------------------------------------------------------------------
 # import os
 #
@@ -82,3 +82,7 @@ print(a.shape)
 # directory = '../../dataset/Weather_captioned/QueryText-embedding-paraphrase-MiniLM-L6-v2'  # 替换为目标目录路径
 # target_string = 'T (degC)'  # 替换为你要查找的字符串
 # delete_files_with_string(directory, target_string)
+#-------------------------------------------------------------------------------
+# import pandas as pd
+# df = pd.read_parquet("../../dataset/Weather_captioned/weather_claim_data.parquet")
+# print(df['201412131800'])
