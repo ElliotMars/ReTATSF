@@ -1,9 +1,9 @@
 from exp.exp_basic import Exp_Basic
-from models import ReTATSF_plot
+from models import ReTATSF
 import torch
 from torch import nn
 from torch import optim
-from data_provider.data_factory import ReTATSF_weather_data_provider
+from data_provider.data_factory import ReTATSF_Energy_data_provider
 import time
 import numpy as np
 import os
@@ -16,7 +16,7 @@ class Exp_Main(Exp_Basic):
         super(Exp_Main, self).__init__(args)
 
     def _build_model(self):
-        model = ReTATSF_plot.Model(self.args).float()
+        model = ReTATSF.Model(self.args).float()
 
         if self.args.use_multi_gpu and self.args.use_gpu:
             model = nn.DataParallel(model, device_ids=self.args.device_ids)
@@ -24,7 +24,7 @@ class Exp_Main(Exp_Basic):
         return model
 
     def _get_data(self, flag, target_ids):
-        data_set, data_loader = ReTATSF_weather_data_provider(self.args, flag, target_ids, self.device)
+        data_set, data_loader = ReTATSF_Energy_data_provider(self.args, flag, target_ids, self.device)
         return data_set, data_loader
 
     def _select_optimizer(self):
@@ -174,7 +174,7 @@ class Exp_Main(Exp_Basic):
             self.model = self.model.module if hasattr(self.model, 'module') else self.model
             self.model.load_state_dict(torch.load(
                 #os.path.join(self.args.checkpoints, "0311_223330_" + setting + "/p (mbar)_best_checkpoint.pth")
-                os.path.join(self.args.checkpoints, "0325_185930_Target_['p (mbar)', 'T (degC)', 'Tpot (K)'] SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_64/p (mbar)T (degC)Tpot (K)_best_checkpoint.pth")
+                os.path.join(self.args.checkpoints, "0724_135151_Target_Gasoline Prices-Weekly New England (PADD 1A) All Grades All Formulations Retail Gasoline Prices  (Dollars per Gallon) SeqLen_36 PredLen_48 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_64/Gasoline PricesWeekly East Coast All Grades All Formulations Retail Gasoline Prices  (Dollars per Gallon)Weekly New England (PADD 1A) All Grades All Formulations Retail Gasoline Prices  (Dollars per Gallon)_best_checkpoint.pth")
             ))
             if self.args.use_multi_gpu and self.args.use_gpu:
                 self.model = nn.DataParallel(self.model, device_ids=self.args.device_ids)

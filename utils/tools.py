@@ -75,15 +75,15 @@ def adjust_learning_rate(optimizer, scheduler, epoch, args, printout=True):
             param_group['lr'] = lr
         if printout: print('Updating learning rate to {}'.format(lr))
 
-def visual(true, preds=None, name='./pic/test.pdf'):
+def visual(true, preds=None, seq_len=60, name='./pic/test.pdf'):
     """
     Results visualization
     """
     plt.figure()
     #draw a vertical line at x = 60 with grey dashed line style linewidth=2
-    plt.axvline(x=60, linestyle='--', color='grey', linewidth=3)
-    plt.axvline(x=75, linestyle='--', color='grey', linewidth=2)
-    plt.axvline(x=55, linestyle='--', color='grey', linewidth=2)
+    plt.axvline(x=seq_len, linestyle='--', color='grey', linewidth=3)
+    plt.axvline(x=seq_len+15, linestyle='--', color='grey', linewidth=2)
+    plt.axvline(x=seq_len-5, linestyle='--', color='grey', linewidth=2)
     if preds is not None:
         plt.plot(preds, label='Prediction', linewidth=2)
     plt.plot(true, label='GroundTruth', linewidth=2)

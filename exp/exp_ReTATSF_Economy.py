@@ -171,10 +171,13 @@ class Exp_Main(Exp_Basic):
 
         if test:
             print('loading model')
+            self.model = self.model.module if hasattr(self.model, 'module') else self.model
             self.model.load_state_dict(torch.load(
                 #os.path.join(self.args.checkpoints, "0311_223330_" + setting + "/p (mbar)_best_checkpoint.pth")
                 os.path.join(self.args.checkpoints, "0325_185930_Target_['p (mbar)', 'T (degC)', 'Tpot (K)'] SeqLen_60 PredLen_14 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_64/p (mbar)T (degC)Tpot (K)_best_checkpoint.pth")
             ))
+            if self.args.use_multi_gpu and self.args.use_gpu:
+                self.model = nn.DataParallel(self.model, device_ids=self.args.device_ids)
 
         if self.args.test_flop:
             test_params_flop(self.model, test_loader, self.device)
@@ -243,7 +246,7 @@ class Exp_Main(Exp_Basic):
                         # print("gt: ", gt)
                         # print("pd: ", pd)
                         # print('j: ', j)
-                        visual(gt, pd, os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
+                        visual(gt, pd, input.shape[-1], os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
                         j+=1
 
         preds = np.concatenate(preds, axis=0)

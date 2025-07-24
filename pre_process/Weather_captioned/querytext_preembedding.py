@@ -58,9 +58,8 @@ for t in time_span:
     date_str, time_str = format_datetime_to_english(t)
     #qt = f"The forecasting point is from {date_str} at {time_str}. {des[target_id].loc[0]}"
     qt = (
-        f"The forecast begins precisely at {date_str}, {time_str}. "
-        f"This timestamp is critical as it defines the start of the time series. "
-        f"{des[target_id].loc[0]}"
+        f"[Forecasting Point]: {date_str} {time_str}. "
+        f"[Description]: {des[target_id].loc[0]}"
     )
     #print(des[target_id])
     qts.append(qt)
