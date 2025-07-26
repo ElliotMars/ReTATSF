@@ -46,6 +46,7 @@ parser.add_argument('--seq_len', type=int, default=60, help='sequence length')
 parser.add_argument('--pred_len', type=int, default=14, help='predicted length')
 parser.add_argument('--stride', type=int, default=8, help='stride')
 parser.add_argument('--target_ids', nargs='+', required=True, type=str, help='names of target TS')
+parser.add_argument('--label_len', required=True, type=int, default=18, help='label window length')
 
 #optimization
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
@@ -56,6 +57,7 @@ parser.add_argument('--patience', type=int, default=5, help='early stopping pati
 parser.add_argument('--pct_start', type=float, default=0.3, help='pct_start')
 parser.add_argument('--train_epochs', type=int, default=60, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
+parser.add_argument('--weight_decay', type=float, default=0.0001, help='l2 lambda')
 
 if __name__ == '__main__':
     args = parser.parse_args()

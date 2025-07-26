@@ -76,7 +76,8 @@ class TS_CoherAnalysis(nn.Module):
         B, C_T, L = target_series.shape
         if self.configs.nref > TS_database.size(1):
             topk_sequences = TS_database.repeat(1, C_T, 1)
-            padding = torch.zeros((B, self.configs.nref - TS_database.size(1), L), device=topk_sequences.device).repeat(1, C_T, 1)
+            padding = torch.zeros((B, self.configs.nref - TS_database.size(1), L),
+                                  device=topk_sequences.device).repeat(1, C_T, 1)
             topk_sequences = torch.concat([topk_sequences, padding], dim=1)
             return topk_sequences
         #target_series = target_series.view(B * C_T, L)  # Flatten target_series for batch processing
@@ -89,7 +90,9 @@ class TS_CoherAnalysis(nn.Module):
         _, topk_indices = torch.topk(coherence_scores, k=self.configs.nref, dim=2)
 
         # Gather the top-k corresponding database sequences
-        topk_sequences = torch.gather(TS_database.unsqueeze(1).repeat(1, C_T, 1, 1), 2, topk_indices.unsqueeze(-1).expand(-1, -1, -1, TS_database.size(-1))).view(B, C_T*self.configs.nref, L)
+        topk_sequences = torch.gather(TS_database.unsqueeze(1).repeat(1, C_T, 1, 1), 2,
+                                      topk_indices.unsqueeze(-1).expand(-1, -1, -1,
+                                        TS_database.size(-1))).view(B, C_T*self.configs.nref, L)
 
         return topk_sequences#[B, C_T*K_T, L]
 
@@ -226,7 +229,8 @@ class QueryTextencoder(nn.Module):
         return query_emb
 
 class TextCrossAttention(nn.Module):
-    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3):
+    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.5,
+                 self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
         self.K_n = configs.nref_text
         self.pred_len = configs.pred_len
@@ -323,7 +327,8 @@ class TextCrossAttention(nn.Module):
         nd_emb_minmax = 2 * (nd_emb - nd_min) / (nd_max - nd_min + 1e-8) - 1
 
         # 计算相似度矩阵 [B, C_T, H, N]
-        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2), nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
+        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2),
+                                  nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
 
         # 取 Top-Kn 相似度索引 [B, C_T, H, Kn]
         _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
@@ -344,7 +349,8 @@ class TextCrossAttention(nn.Module):
         return selected.reshape(B, C_T*self.K_n, H, D)
 
 class CrossandOutput(nn.Module):
-    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.3, self_layer=3, cross_layer=3, TS_attn_layer=3):
+    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.5,
+                 self_layer=3, cross_layer=3, TS_attn_layer=3):
         super(CrossandOutput, self).__init__()
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                          nhead=n_heads,

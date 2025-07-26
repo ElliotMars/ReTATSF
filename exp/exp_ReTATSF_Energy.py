@@ -10,6 +10,8 @@ import os
 from utils.tools import EarlyStopping, adjust_learning_rate, visual, test_params_flop
 from torch.optim import lr_scheduler
 from utils.metrics import metric
+import glob
+import re
 
 class Exp_Main(Exp_Basic):
     def __init__(self, args):
@@ -28,7 +30,8 @@ class Exp_Main(Exp_Basic):
         return data_set, data_loader
 
     def _select_optimizer(self):
-        model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
+        model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate,
+                                 weight_decay=self.args.weight_decay)
         return model_optim
 
     def _select_criterion(self):
@@ -57,7 +60,8 @@ class Exp_Main(Exp_Basic):
                 pred = outputs.detach().cpu()
                 true = batch_target_series_y.detach().cpu()
 
-                loss = criterion(pred, true)
+                label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
+                loss = criterion(pred[:label_len], true[:label_len])
 
                 total_loss.append(loss)
 
@@ -119,7 +123,8 @@ class Exp_Main(Exp_Basic):
 
                 outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 
-                loss = criterion(outputs, batch_target_series_y)
+                label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
+                loss = criterion(outputs[:label_len], batch_target_series_y[:label_len])
                 train_loss.append(loss.item())
 
                 if (i + 1) % 10 == 0:
@@ -150,7 +155,8 @@ class Exp_Main(Exp_Basic):
 
             adjust_learning_rate(model_optim, scheduler, epoch + 1, self.args)
 
-            # print("Target {0} training cost time {1} Last Epoch: Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
+            # print("Target {0} training cost time {1} Last Epoch: Train Loss: {2:.7f} Vali Loss: {3:.7f} \
+            # Test Loss: {4:.7f}".format(
             #             target_id, time.time()-target_time, train_loss, vali_loss, test_loss))
             #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             #best_target_model_path = path + '/' + target_id + '_best_checkpoint.pth'
@@ -161,7 +167,7 @@ class Exp_Main(Exp_Basic):
     def test(self, setting, test=0):
         print(f"Test for {setting}")
         setting = time.strftime("%m%d_%H%M%S_", time.localtime()) + setting
-        folder_path = './M_test_results/' + setting + '/'
+        folder_path = './test_results/' + setting + '/'
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
@@ -169,15 +175,12 @@ class Exp_Main(Exp_Basic):
         #for target_id in self.target_ids:
         test_data, test_loader = self._get_data(flag='test', target_ids=self.target_ids)
 
-        if test:
-            print('loading model')
-            self.model = self.model.module if hasattr(self.model, 'module') else self.model
-            self.model.load_state_dict(torch.load(
-                #os.path.join(self.args.checkpoints, "0311_223330_" + setting + "/p (mbar)_best_checkpoint.pth")
-                os.path.join(self.args.checkpoints, "0724_135151_Target_Gasoline Prices-Weekly New England (PADD 1A) All Grades All Formulations Retail Gasoline Prices  (Dollars per Gallon) SeqLen_36 PredLen_48 Train_1 GPU_True Kt_5 Kn6 Naggregation_3 Nperseg_30 LR_0.0001 Itr_1 bs_64/Gasoline PricesWeekly East Coast All Grades All Formulations Retail Gasoline Prices  (Dollars per Gallon)Weekly New England (PADD 1A) All Grades All Formulations Retail Gasoline Prices  (Dollars per Gallon)_best_checkpoint.pth")
-            ))
-            if self.args.use_multi_gpu and self.args.use_gpu:
-                self.model = nn.DataParallel(self.model, device_ids=self.args.device_ids)
+
+
+        self.model = self.model.module if hasattr(self.model, 'module') else self.model
+        self.load_latest_checkpoint(setting)
+        if self.args.use_multi_gpu and self.args.use_gpu:
+            self.model = nn.DataParallel(self.model, device_ids=self.args.device_ids)
 
         if self.args.test_flop:
             test_params_flop(self.model, test_loader, self.device)
@@ -257,7 +260,8 @@ class Exp_Main(Exp_Basic):
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         inputx = inputx.reshape(-1, inputx.shape[-2], inputx.shape[-1])
 
-        mae, mse, rmse, mape, mspe, rse, corr = metric(preds, trues)
+        label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
+        mae, mse, rmse, mape, mspe, rse, corr = metric(preds[:, :, :label_len], trues[:, :, :label_len])
         print('targets_{}: mse_{}, mae_{}'.format("".join(self.target_ids), mse, mae))
 
         info_save_dir = os.path.join(folder_path, 'result.txt')
@@ -271,3 +275,35 @@ class Exp_Main(Exp_Basic):
         np.save(os.path.join(folder_path, "".join(self.target_ids)+'_pred.npy'), preds)
         np.save(os.path.join(folder_path, "".join(self.target_ids)+'_trues.npy'), trues)
         np.save(os.path.join(folder_path, "".join(self.target_ids)+'_x.npy'), inputx)
+
+    def load_latest_checkpoint(self, setting):
+        setting = setting[12:]
+        checkpoint_root = self.args.checkpoints
+
+        # 忽略 setting 中的 Train_0 或 Train_1 差异
+        generalized_setting = re.sub(r'Train_[01]', 'Train_', setting)
+
+        # 匹配所有目录名中含有 Train_ 的，且其余部分与 setting 匹配的目录
+        all_dirs = glob.glob(os.path.join(checkpoint_root, "*"))
+        matched_dirs = [
+            d for d in all_dirs
+            if os.path.isdir(d) and generalized_setting in re.sub(r'Train_[01]', 'Train_', os.path.basename(d))
+        ]
+
+        if not matched_dirs:
+            raise FileNotFoundError(
+                f"No checkpoint directory matching generalized pattern '{generalized_setting}' found in {checkpoint_root}")
+
+        # 按最近修改时间排序
+        matched_dirs.sort(key=os.path.getmtime, reverse=True)
+        latest_dir = matched_dirs[0]
+
+        # 获取该目录下的 _best_checkpoint.pth 文件
+        model_files = glob.glob(os.path.join(latest_dir, "*_best_checkpoint.pth"))
+        if not model_files:
+            raise FileNotFoundError(f"No '_best_checkpoint.pth' file found in {latest_dir}")
+
+        best_model_path = model_files[0]
+        print(f"正在加载模型: {best_model_path}")
+
+        self.model.load_state_dict(torch.load(best_model_path))

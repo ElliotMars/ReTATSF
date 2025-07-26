@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from torch import nn
 from thop import profile
 class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0.01):
+    def __init__(self, patience=7, verbose=False, delta=0.001):
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
@@ -96,7 +96,8 @@ def visual(true, preds=None, seq_len=60, name='./pic/test.pdf'):
 
 # def test_params_flop(model, batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase):
 #     """
-#     If you want to thest former's flop, you need to give default value to inputs in model.forward(), the following code can only pass one argument to forward()
+#     If you want to thest former's flop, you need to give default value to inputs in model.forward(),
+#     the following code can only pass one argument to forward()
 #     """
 #     model_params = sum(p.numel() for p in model.parameters())
 #     print(f'INFO: Trainable parameter count: {model_params / 1e6:.2f}M')
