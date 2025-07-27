@@ -1,6 +1,6 @@
 export CUDA_VISIBLE_DEVICES=5,3
 
-for group in "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
+for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
   do
     IFS='|' read -r -a target_ids <<< "$group"
     for pred_len in 12 24 36 48
