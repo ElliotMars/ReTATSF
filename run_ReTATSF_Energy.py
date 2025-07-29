@@ -58,6 +58,7 @@ parser.add_argument('--pct_start', type=float, default=0.3, help='pct_start')
 parser.add_argument('--train_epochs', type=int, default=60, help='train epochs')
 parser.add_argument('--lradj', type=str, default='type3', help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=0.0001, help='l2 lambda')
+parser.add_argument('--dropout_rate', type=float, default=0.5, help='dropout rate')
 
 if __name__ == '__main__':
     args = parser.parse_args()

@@ -3,7 +3,7 @@ export CUDA_VISIBLE_DEVICES=5,3
 #for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
 #  do
 #    IFS='|' read -r -a target_ids <<< "$group"   #--target_ids "${target_ids[@]}" \
-for target_id in 'Gasoline Prices' 'East Coast' 'New England' 'Central Atlantic' 'Lower Atlantic' 'Midwest' 'Gulf Coast' 'Rocky Mountain' 'West Coast'
+for target_ids in "Gasoline Prices" "East Coast" "New England" "Central Atlantic" "Lower Atlantic" "Midwest" "Gulf Coast" "Rocky Mountain" "West Coast"
 do
     for pred_len in 12 24 36 48
     do
@@ -17,7 +17,7 @@ do
             --NewsDatabase_path 'Time-MMD/textual/Energy/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './checkpoints/' \
-            --target_ids $target_ids \
+            --target_ids "$target_ids" \
             --batch_size 64 \
             --num_data 1 \
             --patience 30 \
