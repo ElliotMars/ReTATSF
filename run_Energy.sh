@@ -1,8 +1,10 @@
 export CUDA_VISIBLE_DEVICES=5,3
 
-for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
-  do
-    IFS='|' read -r -a target_ids <<< "$group"
+#for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
+#  do
+#    IFS='|' read -r -a target_ids <<< "$group"   #--target_ids "${target_ids[@]}" \
+for target_id in 'Gasoline Prices' 'East Coast' 'New England' 'Central Atlantic' 'Lower Atlantic' 'Midwest' 'Gulf Coast' 'Rocky Mountain' 'West Coast'
+do
     for pred_len in 12 24 36 48
     do
       python /data/dyl/ReTATSF/run_ReTATSF_Energy.py \
@@ -15,7 +17,7 @@ for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower At
             --NewsDatabase_path 'Time-MMD/textual/Energy/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './checkpoints/' \
-            --target_ids "${target_ids[@]}" \
+            --target_ids $target_ids \
             --batch_size 64 \
             --num_data 1 \
             --patience 30 \
@@ -30,6 +32,7 @@ for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower At
             --stride 1 \
             --learning_rate 1e-4 \
             --weight_decay 1e-4 \
+            --dropout_rate 0.5 \
             --itr 1 \
             --num_workers 2 \
             --pct_start 0.3 \
