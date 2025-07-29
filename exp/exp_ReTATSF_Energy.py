@@ -61,7 +61,7 @@ class Exp_Main(Exp_Basic):
                 true = batch_target_series_y.detach().cpu()
 
                 label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
-                loss = criterion(pred[:label_len], true[:label_len])
+                loss = criterion(pred[:, :, :label_len], true[:, :, :label_len])
 
                 total_loss.append(loss)
 
@@ -124,7 +124,7 @@ class Exp_Main(Exp_Basic):
                 outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
 
                 label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
-                loss = criterion(outputs[:label_len], batch_target_series_y[:label_len])
+                loss = criterion(outputs[:, :, :label_len], batch_target_series_y[:, :, :label_len])
                 train_loss.append(loss.item())
 
                 if (i + 1) % 10 == 0:
@@ -139,7 +139,7 @@ class Exp_Main(Exp_Basic):
                 model_optim.step()
 
                 adjust_learning_rate(model_optim, scheduler, epoch + 1, self.args, printout=False)
-                scheduler.step()
+                #scheduler.step()
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
