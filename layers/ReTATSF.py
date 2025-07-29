@@ -229,14 +229,14 @@ class QueryTextencoder(nn.Module):
         return query_emb
 
 class TextCrossAttention(nn.Module):
-    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8, dropout=0.5,
+    def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8,
                  self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
         self.K_n = configs.nref_text
         self.pred_len = configs.pred_len
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
                                                          nhead=n_heads,
-                                                         dropout=dropout,
+                                                         dropout=configs.dropout_rate,
                                                          dim_feedforward=nd_embedding_dim * 4,
                                                          activation='gelu',
                                                          batch_first=True,
@@ -246,7 +246,7 @@ class TextCrossAttention(nn.Module):
 
         self_encoder_layer = nn.TransformerDecoderLayer(d_model=qt_embedding_dim,
                                                         nhead=n_heads,
-                                                        dropout=dropout,
+                                                        dropout=configs.dropout_rate,
                                                         dim_feedforward=qt_embedding_dim * 4,
                                                         activation='gelu',
                                                         batch_first=True,
@@ -349,12 +349,12 @@ class TextCrossAttention(nn.Module):
         return selected.reshape(B, C_T*self.K_n, H, D)
 
 class CrossandOutput(nn.Module):
-    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8, dropout=0.5,
+    def __init__(self, configs, text_embedding_dim=384, temp_embedding_dim=384, n_heads=8,
                  self_layer=3, cross_layer=3, TS_attn_layer=3):
         super(CrossandOutput, self).__init__()
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                          nhead=n_heads,
-                                                         dropout=dropout,
+                                                         dropout=configs.dropout_rate,
                                                          dim_feedforward=temp_embedding_dim * 4,
                                                          activation='gelu',
                                                          batch_first=True,
@@ -364,7 +364,7 @@ class CrossandOutput(nn.Module):
 
         self_encoder_layer = nn.TransformerDecoderLayer(d_model=text_embedding_dim,
                                                         nhead=n_heads,
-                                                        dropout=dropout,
+                                                        dropout=configs.dropout_rate,
                                                         dim_feedforward=text_embedding_dim * 4,
                                                         activation='gelu',
                                                         batch_first=True,
@@ -374,7 +374,7 @@ class CrossandOutput(nn.Module):
 
         TS_self_attn_layer = nn.TransformerDecoderLayer(d_model=temp_embedding_dim,
                                                         nhead=n_heads,
-                                                        dropout=dropout,
+                                                        dropout=configs.dropout_rate,
                                                         dim_feedforward=temp_embedding_dim * 4,
                                                         activation='gelu',
                                                         batch_first=True,
