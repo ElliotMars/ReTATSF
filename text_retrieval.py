@@ -8,7 +8,7 @@ from typing import List
 
 K = 10  # 设置你想要的Top-K值
 
-def plot_topk_hit_statistics(top_files_per_query: List[List[str]], title: str = "Top-K Hit Counts", save_path: str = f'retrieval_statistics_{K}'):
+def plot_topk_hit_statistics(top_files_per_query: List[List[str]], title: str = "Top-K Hit Counts", save_path: str = f'./fig/retrieval_statistics_{K}'):
     flat_top_files = [fname for query in top_files_per_query for fname in query]
     file_counter = Counter(flat_top_files)
     sorted_items = sorted(file_counter.items(), key=lambda x: x[1], reverse=True)
