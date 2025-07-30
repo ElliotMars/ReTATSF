@@ -3,7 +3,7 @@ export CUDA_VISIBLE_DEVICES=5,3
 #for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
 #  do
 #    IFS='|' read -r -a target_ids <<< "$group"   #--target_ids "${target_ids[@]}" \
-for target_ids in "Gasoline Prices" "East Coast" "New England" "Central Atlantic" "Lower Atlantic" "Midwest" "Gulf Coast" "Rocky Mountain" "West Coast"
+for target_ids in "Gasoline Prices" #"East Coast" "New England" "Central Atlantic" "Lower Atlantic" "Midwest" "Gulf Coast" "Rocky Mountain" "West Coast"
 do
     for pred_len in 12 24 36 48
     do
