@@ -9,9 +9,10 @@ def calculate_mse(trues_path, preds_path):
     preds = np.load(preds_path)
     origin_shape = trues.shape
     trues, preds = trues[:, :, :min(18, trues.shape[-1])], preds[:, :, :min(18, preds.shape[-1])]
+    num_channels = trues.shape[1]
 
-    trues_reshaped = trues.transpose(1, 0, 2).reshape(3, -1)
-    preds_reshaped = preds.transpose(1, 0, 2).reshape(3, -1)
+    trues_reshaped = trues.transpose(1, 0, 2).reshape(num_channels, -1)
+    preds_reshaped = preds.transpose(1, 0, 2).reshape(num_channels, -1)
 
     mse = np.mean((trues_reshaped - preds_reshaped) ** 2, axis=-1)
     return mse, origin_shape
@@ -27,6 +28,7 @@ def process_directory(result_dir, log_path):
                     preds_path = os.path.join(root, prefix + "_pred.npy")
 
                     if not os.path.exists(preds_path):
+                        print(f'没找到{preds_path}')
                         continue
 
                     mse, shape = calculate_mse(trues_path, preds_path)
@@ -53,6 +55,8 @@ def generate_excel(results, output_path):
             if prefix.startswith(group_name):
                 for region, value in zip(region_list, mse):
                     df.loc[region, str(pred_len)] = value
+            else:
+                df.loc[prefix, str(pred_len)] = mse
 
     df = df.astype(float)
     df["AVG"] = df.mean(axis=1)
