@@ -405,6 +405,9 @@ class CrossandOutput(nn.Module):
         B, C_Tmul_K_Tplus1_, L, D_temp = temp_emb.shape #C=K_temp_plus1
         _, _, H, D_text = text_emb.shape#C=K_text
 
+        temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
+        temp_emb = self.TS_self_attention(tgt=temp_emb, memory=temp_emb)
+        temp_emb = temp_emb.reshape(B, C_Tmul_K_Tplus1_, L, D_temp)
         text_emb = torch.cat((temp_emb, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]
 
         temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
