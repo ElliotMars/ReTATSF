@@ -94,43 +94,6 @@ class Dataset_ReTATSF_Energy(Dataset):
         time_span_all = df_raw[col_time_name]
         self.time_span = time_span_all[border1:border2].values
 
-        #获取newsdatabase
-        directory_nd = os.path.join(self.root_path, self.NewsDatabase_path)
-        time_head = str(self.time_span[0])
-        time_tail = str(self.time_span[-1])
-
-        # 将时间字符串转换为 datetime 对象
-        # 获取时间范围
-        start_time = datetime.strptime(time_head, "%Y-%m-%d")
-        end_time = datetime.strptime(time_tail, "%Y-%m-%d")
-
-        # 遍历目录，筛选符合时间范围的 .npy 文件
-        npy_files = []
-        for f in os.listdir(directory_nd):
-            if not f.endswith('.npy'):
-                continue
-
-            # 提取文件名中的时间部分（如 "News-2016-10-20 00:00:00.npy" → "2016-10-20 00:00:00"）
-            time_part = f.replace("News-", "").replace(".npy", "")
-            file_time = datetime.strptime(time_part, "%Y-%m-%d")
-
-            # 检查是否在时间范围内
-            if start_time <= file_time <= end_time:
-                npy_files.append(f)
-
-        # 按文件名排序（确保时间顺序正确）
-        npy_files.sort()
-
-        # 加载所有符合条件的 .npy 文件
-        arrays = []
-        for npy_file in npy_files:
-            file_path = os.path.join(directory_nd, npy_file)
-            array = np.load(file_path)
-            arrays.append(array)
-
-        # 堆叠成张量 [N, M, D]
-        self.newsdatabase = np.stack(arrays, axis=0)
-
     def __getitem__(self, index):
         lbw_begin = index
         lbw_end = lbw_begin + self.seq_len
@@ -162,7 +125,42 @@ class Dataset_ReTATSF_Energy(Dataset):
             des_embeddings.append(des_embedding)
         des_embeddings = np.stack(des_embeddings,axis=0)
 
-        newsdatabase_sample = self.newsdatabase
+        directory_nd = os.path.join(self.root_path, self.NewsDatabase_path)
+        time_head = str(time_span_sample[0])
+        time_tail = str(time_span_sample[-1])
+
+        # 将时间字符串转换为 datetime 对象
+        # 获取时间范围
+        start_time = datetime.strptime(time_head, "%Y-%m-%d")
+        end_time = datetime.strptime(time_tail, "%Y-%m-%d")
+
+        # 遍历目录，筛选符合时间范围的 .npy 文件
+        npy_files = []
+        for f in os.listdir(directory_nd):
+            if not f.endswith('.npy'):
+                continue
+
+            # 提取文件名中的时间部分（如 "News-2016-10-20 00:00:00.npy" → "2016-10-20 00:00:00"）
+            time_part = f.replace("News-", "").replace(".npy", "")
+            file_time = datetime.strptime(time_part, "%Y-%m-%d")
+
+            # 检查是否在时间范围内
+            if start_time <= file_time <= end_time:
+                npy_files.append(f)
+
+        # 按文件名排序（确保时间顺序正确）
+        npy_files.sort()
+
+        # 加载所有符合条件的 .npy 文件
+        arrays = []
+        for npy_file in npy_files:
+            file_path = os.path.join(directory_nd, npy_file)
+            array = np.load(file_path)
+            arrays.append(array)
+
+        # 堆叠成张量 [N, M, D]
+        newsdatabase_sample = np.stack(arrays, axis=0)
+
 
         return target_series_x, target_series_y, TS_database_sample, qt_samples_embeddings, des_embeddings, newsdatabase_sample
 
