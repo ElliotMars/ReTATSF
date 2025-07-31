@@ -28,7 +28,7 @@ time_span = df['Date'].tolist()
 des = pd.read_parquet('../../../dataset/Time-MMD/textual/Energy/QueryTextPackage.parquet')
 
 if ForecastingPoint:
-    save_dir = f'../../../dataset/Time-MMD/textual/Energy/QueryText-embedding-{BERT_model}-Forecasting/{target_id}'
+    save_dir = f'../../../dataset/Time-MMD/textual/Energy/QueryText-embedding-{BERT_model}-ForecastingPoint/{target_id}'
     os.makedirs(save_dir, exist_ok=True)
     # 主进度条
     pbar = tqdm.tqdm(total=len(time_span), desc="Encoding")
@@ -38,7 +38,7 @@ if ForecastingPoint:
 
     for t in time_span:
         qt = (
-            f"[Forecasting Point]: {t}. "
+            f"{t}. "
             #f"[Description]: {des[target_id].loc[0]}"
         )
         qts.append(qt)
@@ -69,7 +69,7 @@ else:
     save_dir = f'../../../dataset/Time-MMD/textual/Energy/QueryText-embedding-{BERT_model}-Description/{target_id}'
     os.makedirs(save_dir, exist_ok=True)
     qt = (
-        f"[Description]: {des[target_id].loc[0]}"
+        f"{des[target_id].loc[0]}"
     )
     print(qt)
 
