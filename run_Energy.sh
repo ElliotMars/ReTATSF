@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=5,3
+export CUDA_VISIBLE_DEVICES=5,2
 
 #for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
 #  do
@@ -13,12 +13,13 @@ do
             --root_path './dataset' \
             --TS_data_path 'Time-MMD/numerical/Energy/Energy.parquet' \
             --QT_data_path 'Time-MMD/textual/Energy/QueryTextPackage.parquet' \
-            --QT_emb_path 'Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2' \
+            --QT_emb_path 'Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2-ForecastingPoint' \
+            --Des_emb_path 'Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2-Description' \
             --NewsDatabase_path 'Time-MMD/textual/Energy/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2' \
             --features 'M' \
             --checkpoints './checkpoints/' \
             --target_ids "$target_ids" \
-            --batch_size 64 \
+            --batch_size 32 \
             --num_data 1 \
             --patience 30 \
             --train_epochs 100 \
@@ -26,6 +27,7 @@ do
             --nref 5 \
             --naggregation 3 \
             --nref_text 6 \
+            --qt_ref_text 5 \
             --seq_len 36 \
             --pred_len $pred_len \
             --label_len 18 \

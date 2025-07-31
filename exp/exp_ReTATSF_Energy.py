@@ -44,16 +44,17 @@ class Exp_Main(Exp_Basic):
         total_time = 0
         with torch.no_grad():
             for i, (batch_target_series_x, batch_target_series_y,
-                    batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(vali_loader):
+                    batch_TS_database, batch_qt, batch_des, batch_newsdatabase) in enumerate(vali_loader):
                 batch_target_series_x = batch_target_series_x.float().to(self.device)
                 batch_target_series_y = batch_target_series_y.float().to(self.device)
                 batch_TS_database = batch_TS_database.float().to(self.device)
                 batch_qt = batch_qt.float().to(self.device)
+                batch_des = batch_des.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
 
                 time_now = time.time()
 
-                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
+                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
                 total_time += time.time() - time_now
 
@@ -109,7 +110,7 @@ class Exp_Main(Exp_Basic):
 
             iterstage_time = time.time()
             for i, (batch_target_series_x, batch_target_series_y,
-                    batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(train_loader):
+                    batch_TS_database, batch_qt, batch_des, batch_newsdatabase) in enumerate(train_loader):
                 iter_count += 1
                 model_optim.zero_grad()
                 batch_target_series_x = batch_target_series_x.float().to(self.device)
@@ -117,11 +118,12 @@ class Exp_Main(Exp_Basic):
 
                 batch_TS_database = batch_TS_database.float().to(self.device)
                 batch_qt = batch_qt.float().to(self.device)
+                batch_des = batch_des.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
                 # print('batch_target_series_x: ', batch_target_series_x)
                 # print('batch_target_series_y: ', batch_target_series_y)
 
-                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
+                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
                 label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
                 loss = criterion(outputs[:, :, :label_len], batch_target_series_y[:, :, :label_len])
@@ -193,15 +195,16 @@ class Exp_Main(Exp_Basic):
         self.model.eval()
         with torch.no_grad():
             for i, (batch_target_series_x, batch_target_series_y,
-                    batch_TS_database, batch_qt, batch_newsdatabase) in enumerate(test_loader):
+                    batch_TS_database, batch_qt, batch_des, batch_newsdatabase) in enumerate(test_loader):
                 batch_target_series_x = batch_target_series_x.float().to(self.device)
                 batch_target_series_y = batch_target_series_y.float().to(self.device)
 
                 batch_TS_database = batch_TS_database.float().to(self.device)
                 batch_qt = batch_qt.float().to(self.device)
+                batch_des = batch_des.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
 
-                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase)
+                outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
                     # outputs = outputs.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
                     # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]

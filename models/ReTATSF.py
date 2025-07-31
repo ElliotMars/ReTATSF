@@ -13,7 +13,7 @@ class Model(nn.Module):
 
         self.configs = configs
 
-    def forward(self, target_series, TS_database, qt, newsdatabase):
+    def forward(self, target_series, TS_database, qt, des, newsdatabase):
         #Time Series
         ref_TS = self.TS_CoherAnalysis(target_series, TS_database)#[B, C_T*K_T, L]
         #print('ref_TS: ', ref_TS)
@@ -21,7 +21,7 @@ class Model(nn.Module):
 
         #Text
         #qt_embedding = self.QueryTextencoder(qt).unsqueeze(1)#[B, H(1), D_text(384)]->[B,  K(1), H(1), D_text(384)]
-        Text_Synthesis = self.TextCrossAttention(qt, newsdatabase)#[B, C_T*K_n, H, D]
+        Text_Synthesis = self.TextCrossAttention(qt, des, newsdatabase)#[B, C_T*K_n, H, D]
         #print('Q: ', Text_Synthesis)
 
         #Cross and Output

@@ -233,6 +233,7 @@ class TextCrossAttention(nn.Module):
                  self_layer=3, cross_layer=3):
         super(TextCrossAttention, self).__init__()
         self.K_n = configs.nref_text
+        self.K_n_qt = configs.qt_ref_text
         self.pred_len = configs.pred_len
         cross_encoder_layer = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
                                                          nhead=n_heads,
@@ -243,6 +244,16 @@ class TextCrossAttention(nn.Module):
                                                          norm_first=True)
         norm_layer = nn.LayerNorm(nd_embedding_dim, eps=1e-5)
         self.cross_encoder = nn.TransformerDecoder(cross_encoder_layer, cross_layer, norm=norm_layer)
+
+        cross_encoder_layer2 = nn.TransformerDecoderLayer(d_model=nd_embedding_dim,
+                                                         nhead=n_heads,
+                                                         dropout=configs.dropout_rate,
+                                                         dim_feedforward=nd_embedding_dim * 4,
+                                                         activation='gelu',
+                                                         batch_first=True,
+                                                         norm_first=True)
+        norm_layer2 = nn.LayerNorm(nd_embedding_dim, eps=1e-5)
+        self.cross_encoder2 = nn.TransformerDecoder(cross_encoder_layer2, cross_layer, norm=norm_layer2)
 
         self_encoder_layer = nn.TransformerDecoderLayer(d_model=qt_embedding_dim,
                                                         nhead=n_heads,
@@ -257,94 +268,74 @@ class TextCrossAttention(nn.Module):
         for p in self.cross_encoder.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
+        for p in self.cross_encoder2.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
         for p in self.self_encoder.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward(self, qt_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
-        ref_news_embed = self.retrival(qt_emb, nd_emb)#[B, C_T*K_n, H, D]
+    def forward(self, qt_emb, des_emb, nd_emb):#qt_emb[B, C_T, H(seq_len), D(384)] nd_emb[B, N(7304), M(1), D(384)]
+        ref_news_embed = self.retrival(qt_emb, des_emb, nd_emb)#[B, C_T*K_n, H, D]
         B, C_T, H, D = qt_emb.shape
         _, C_TmulK_n, _, _ = ref_news_embed.shape
 
         qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*C_T*self.K_n, H, D)
+        des_emb = des_emb.repeat(1, self.K_n, H, 1).reshape(B*C_T*self.K_n, H, D)
         ref_news_embed = ref_news_embed.reshape(B*C_TmulK_n, H, D)
         #print('右下Q: ', qt_emb)
         #print('右下KV: ', ref_news_embed)
 
         result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
+        result = self.cross_encoder2(tgt=des_emb, memory=result)
         result = self.self_encoder(tgt=result, memory=result)#[B*C_T*K_n, H, D]
 
         result = result.view(B, C_T*self.K_n, -1, D)
 
         return result
 
-    # def retrival(self, qt_emb, nd_emb):
-    #     # 输入维度:
-    #     # qt_emb: [B, K, H, D]
-    #     # nd_emb: [B, N, M, D]
-    #
-    #     B, K, H, D = qt_emb.shape
-    #     _, N, M, _ = nd_emb.shape
-    #
-    #     # 压缩时间步维度 (假设 H=1 和 M=1)
-    #     qt_emb = qt_emb.squeeze(2)  # [B, K, D]
-    #     nd_emb = nd_emb.squeeze(2)  # [B, N, D]
-    #
-    #     # 计算相似度矩阵 [B, K, N]
-    #     similarity = torch.matmul(qt_emb, nd_emb.transpose(1, 2))  # Batch matrix multiplication
-    #
-    #     # 取 Top-Kn 相似度索引 [B, K, Kn]
-    #     _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
-    #
-    #     # 生成索引模板 [B, K, Kn, 1, 1] -> 扩展到 [B, K, Kn, M, D]
-    #     expand_dims = (B, K, self.K_n, M, D)
-    #     topk_indices = topk_indices.view(B, K, self.K_n, 1, 1).expand(expand_dims)
-    #
-    #     # 从 nd_emb 收集结果 [B, K, Kn, M, D]
-    #     selected = nd_emb.unsqueeze(-2).unsqueeze(1).gather(  # 添加 K 维度,找回M维度
-    #         dim=2,  # 在 N 维度上收集
-    #         index=topk_indices
-    #     )
-    #
-    #     # 压缩 K 维度 (若 K=1)
-    #     return selected.squeeze(1) if K == 1 else selected
-    def retrival(self, qt_emb, nd_emb):
+    def retrival(self, qt_emb, des_emb, nd_emb):
         # 输入维度:
-        # qt_emb: [B, C_T, H, D]
+        # qt_emb: [B, C_T, H, D]]
+        # des_emb: [B, C_T, 1, D]
         # nd_emb: [B, N, M, D]
 
         B, C_T, H, D = qt_emb.shape
         _, N, M, _ = nd_emb.shape
 
-        # 对 qt_emb 进行 Min-Max 归一化到 [-1, 1]
-        qt_min = qt_emb.min(dim=-1, keepdim=True)[0]
-        qt_max = qt_emb.max(dim=-1, keepdim=True)[0]
-        qt_emb_minmax = 2 * (qt_emb - qt_min) / (qt_max - qt_min + 1e-8) - 1
-
-        # 对 nd_emb 进行 Min-Max 归一化到 [-1, 1]
-        nd_min = nd_emb.min(dim=-1, keepdim=True)[0]
-        nd_max = nd_emb.max(dim=-1, keepdim=True)[0]
-        nd_emb_minmax = 2 * (nd_emb - nd_min) / (nd_max - nd_min + 1e-8) - 1
-
         # 计算相似度矩阵 [B, C_T, H, N]
-        similarity = torch.matmul(qt_emb_minmax.transpose(1, 2),
-                                  nd_emb_minmax.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
+        similarity = torch.matmul(qt_emb.transpose(1, 2),
+                                  nd_emb.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
 
         # 取 Top-Kn 相似度索引 [B, C_T, H, Kn]
-        _, topk_indices = torch.topk(similarity, k=self.K_n, dim=-1, sorted=True)
+        _, topk_indices = torch.topk(similarity, k=self.K_n_qt, dim=-1, sorted=True)
 
         # 生成索引模板 [B, C_T, H, Kn, 1, 1] -> 扩展到 [B, C_T, H, Kn, M, D]
-        expand_dims = (B, C_T, H, self.K_n, M, D)
-        topk_indices = topk_indices.view(B, C_T, H, self.K_n, 1, 1).expand(expand_dims)
+        expand_dims = (B, C_T, H, self.K_n_qt, M, D)
+        topk_indices = topk_indices.view(B, C_T, H, self.K_n_qt, 1, 1).expand(expand_dims)
 
         # 从 nd_emb 收集结果 [B, C_T, H, Kn, M, D]
-        selected = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, C_T, self.pred_len, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
+        selected_qt = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, C_T, self.pred_len, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
             dim=3,  # 在 N 维度上收集
             index=topk_indices
         )
 
         # 重新排列维度以获得 [B, C_T, K_n, H, D]
-        selected = selected.squeeze(-2).permute(0, 1, 3, 2, 4)  # [B, C_T, K_n, H, D]
+        selected_qt = selected_qt.squeeze(-2).permute(0, 1, 3, 2, 4)  # [B, C_T, K_n, H, D]
+
+        similarity = torch.matmul(des_emb.transpose(1, 2),
+                                  nd_emb.transpose(1, 2).transpose(2, 3)).permute(0, 2, 1, 3)
+        _, topk_indices = torch.topk(similarity, k=self.K_n-self.K_n_qt, dim=-1, sorted=True)
+        expand_dims = (B, C_T, H, self.K_n-self.K_n_qt, M, D)
+        topk_indices = topk_indices.view(B, C_T, 1, self.K_n-self.K_n_qt, 1, 1).expand(expand_dims)
+        selected_des = nd_emb.unsqueeze(1).unsqueeze(2).repeat(1, C_T, self.pred_len, 1, 1, 1).gather(  # 添加 K 和 H 维度,找回M维度
+            dim=3,  # 在 N 维度上收集
+            index=topk_indices
+        )
+
+        selected_des = selected_des.squeeze(-2).permute(0, 1, 3, 2, 4)  # [B, C_T, K_n, H, D]
+
+        selected = torch.cat([selected_qt, selected_des], dim=2)
 
         return selected.reshape(B, C_T*self.K_n, H, D)
 

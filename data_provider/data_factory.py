@@ -125,6 +125,7 @@ def ReTATSF_Energy_data_provider(args, flag, target_ids, device):
     TS_data_path = args.TS_data_path
     QT_data_path = args.QT_data_path
     QT_emb_path = args.QT_emb_path
+    Des_emb_path = args.Des_emb_path
     NewsDatabase_path = args.NewsDatabase_path
 
     try:
@@ -150,6 +151,7 @@ def ReTATSF_Energy_data_provider(args, flag, target_ids, device):
         TS_data_path=TS_data_path,
         QT_data_path=QT_data_path,
         QT_emb_path=QT_emb_path,
+        Des_emb_path=Des_emb_path,
         NewsDatabase_path=NewsDatabase_path,
         flag=flag,
         size=[args.seq_len, args.pred_len],
@@ -181,6 +183,7 @@ def custom_collate_fn(batch):
     batch_target_series_y = torch.stack([torch.tensor(item[1]).permute(1, 0) for item in batch])
     batch_TS_database = torch.stack([torch.tensor(item[2]).permute(1, 0) for item in batch])
     batch_qt = torch.stack([torch.tensor(item[3]) for item in batch])
-    batch_newsdatabase = torch.stack([torch.tensor(item[4]) for item in batch])
+    batch_des = torch.stack([torch.tensor(item[4]).unsqueeze(1) for item in batch])
+    batch_newsdatabase = torch.stack([torch.tensor(item[5]) for item in batch])
 
-    return batch_target_series_x, batch_target_series_y, batch_TS_database, batch_qt, batch_newsdatabase
+    return batch_target_series_x, batch_target_series_y, batch_TS_database, batch_qt, batch_des, batch_newsdatabase

@@ -447,7 +447,7 @@ class Dataset_ReTATSF_Economy(Dataset):
         return self.scaler.inverse_transform(data)
 
 class Dataset_ReTATSF_Energy(Dataset):
-    def __init__(self, root_path, TS_data_path, QT_data_path, QT_emb_path, NewsDatabase_path, flag,
+    def __init__(self, root_path, TS_data_path, QT_data_path, QT_emb_path, Des_emb_path, NewsDatabase_path, flag,
                  size, #features,
                  target_ids, scale, stride, device, num_data):
 
@@ -467,6 +467,7 @@ class Dataset_ReTATSF_Energy(Dataset):
         self.TS_data_path = TS_data_path
         self.QT_data_path = QT_data_path
         self.QT_emb_path = QT_emb_path
+        self.Des_emb_path = Des_emb_path
         self.NewsDatabase_path = NewsDatabase_path
 
         #self.features = features
@@ -537,13 +538,15 @@ class Dataset_ReTATSF_Energy(Dataset):
         self.target_series = target_series[border1:border2]
         self.TS_database = TS_database[border1:border2]
 
-        #获取qt_des和time span
-        directory_qt_des = os.path.join(self.root_path, self.QT_data_path)
-        df_des = pd.read_parquet(directory_qt_des)
-        self.qt_des = df_des[self.target_ids]
+
+        # directory_qt_des = os.path.join(self.root_path, self.QT_data_path)
+        # df_des = pd.read_parquet(directory_qt_des)
+        # self.qt_des = df_des[self.target_ids]
+
+        # 获取time span
         col_time_name = df_raw.columns[0]
         time_span_all = df_raw[col_time_name]
-        self.time_span = time_span_all[border1s[0]:border2s[0]].values
+        self.time_span = time_span_all[border1:border2].values
 
         #获取newsdatabase
         directory_nd = os.path.join(self.root_path, self.NewsDatabase_path)
@@ -627,33 +630,17 @@ class Dataset_ReTATSF_Energy(Dataset):
             qt_samples_embedding = np.vstack(qt_samples_embedding)  # [pred_len, D]
             qt_samples_embeddings.append(qt_samples_embedding)
         qt_samples_embeddings = np.stack(qt_samples_embeddings,axis=0) #[C_T, pred_len, D]
-        # qt_samples_embeddings = []
-        # #time_now = time.time()
-        # for i in range(len(self.target_ids)):
-        #     qt_samples_embedding = []
-        #     for point in time_span_sample:
-        #         day = str(point)
-        #         qt_sample = f"{day}: {self.qt_des[self.target_ids[i]]}"
-        #         qt_sample_embedding = self.qt_encoder.encode(qt_sample).reshape(1, 1, 384)
-        #         qt_samples_embedding.append(qt_sample_embedding)
-        #     qt_samples_embedding = np.concatenate(qt_samples_embedding, axis=1)#[1, pred_len, D]
-        #     qt_samples_embeddings.append(qt_samples_embedding)
-        # qt_samples_embeddings = np.concatenate(qt_samples_embeddings, axis=0)#[C_T, pred_len, D]
 
-
-
-        #time_spend = time.time() - time_now
-        #print(f"encoding time: {time_spend}s")
-        # qt_samples = []
-        # for point in time_span_sample:
-        #     day = str(point)
-        #     qt_sample = f"{day}: {self.qt_des[0]}"
-        #     qt_samples.append(qt_sample)
-        # qt_samples_embedding = self.qt_encoder.encode(qt_samples).reshape(1, 14, 384)
+        des_embeddings = []
+        for target_id in self.target_ids:
+            dir = os.path.join(self.root_path, self.Des_emb_path, target_id, f"{target_id}.npy")
+            des_embedding = np.load(dir)
+            des_embeddings.append(des_embedding)
+        des_embeddings = np.stack(des_embeddings,axis=0)
 
         newsdatabase_sample = self.newsdatabase
 
-        return target_series_x, target_series_y, TS_database_sample, qt_samples_embeddings, newsdatabase_sample
+        return target_series_x, target_series_y, TS_database_sample, qt_samples_embeddings, des_embeddings, newsdatabase_sample
 
     def __len__(self):
         return len(self.target_series) - self.seq_len - self.pred_len + 1

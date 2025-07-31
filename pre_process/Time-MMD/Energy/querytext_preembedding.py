@@ -9,14 +9,12 @@ import torch
 
 parser = argparse.ArgumentParser(description='Query text Pre-embedding')
 parser.add_argument('--target_id', type=str, required=True, help='target id')
-parser.add_argument('--ForcastingPoint', type=int, required=True, help='ForcastingPoint or Description')
+parser.add_argument('--ForecastingPoint', type=int, required=True, help='ForecastingPoint or Description')
 args = parser.parse_args()
 target_id = args.target_id
-ForcastingPoint = args.ForcastingPoint
+ForecastingPoint = args.ForecastingPoint
 
 BERT_model = 'paraphrase-MiniLM-L6-v2'
-save_dir = f'../../../dataset/Time-MMD/textual/Energy/QueryText-embedding-{BERT_model}-Description/{target_id}'
-os.makedirs(save_dir, exist_ok=True)
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = SentenceTransformer(BERT_model).to(device)
@@ -29,7 +27,9 @@ time_span = df['Date'].tolist()
 
 des = pd.read_parquet('../../../dataset/Time-MMD/textual/Energy/QueryTextPackage.parquet')
 
-if ForcastingPoint:
+if ForecastingPoint:
+    save_dir = f'../../../dataset/Time-MMD/textual/Energy/QueryText-embedding-{BERT_model}-Forecasting/{target_id}'
+    os.makedirs(save_dir, exist_ok=True)
     # 主进度条
     pbar = tqdm.tqdm(total=len(time_span), desc="Encoding")
 
@@ -66,6 +66,8 @@ if ForcastingPoint:
 
     pbar.close()
 else:
+    save_dir = f'../../../dataset/Time-MMD/textual/Energy/QueryText-embedding-{BERT_model}-Description/{target_id}'
+    os.makedirs(save_dir, exist_ok=True)
     qt = (
         f"[Description]: {des[target_id].loc[0]}"
     )
