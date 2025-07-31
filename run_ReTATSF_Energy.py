@@ -16,12 +16,9 @@ parser.add_argument('--is_training', type=int, required=True, default=1, help='s
 #ReTATSF dataloader
 parser.add_argument('--root_path', type=str, default='./dataset', help='root path')
 parser.add_argument('--TS_data_path', type=str, default='Time-MMD/numerical/Energy/Energy.parquet', help='Time series data path')
-parser.add_argument('--QT_data_path', type=str, default='Time-MMD/textual/Energy/QueryTextPackage.parquet', help='Query des text data path')
 parser.add_argument('--QT_emb_path', type=str, default='Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2-ForecastingPoint', help='Query text embedding data path')
 parser.add_argument('--Des_emb_path', type=str, default='Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2-Description', help='Description embedding data path')
 parser.add_argument('--NewsDatabase_path', type=str, default='Time-MMD/textual/Energy/NewsDatabase-embedding-paraphrase-MiniLM-L6-v2', help='News database path')
-parser.add_argument('--features', type=str, default='M',
-                    help='forecasting task, options:[M, MS]; M:multivariate predict multivariate, MS:multivariate predict univariate')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='model checkpoints path')
 parser.add_argument('--num_data', type=int, default=1, help='number of data points in total')
 

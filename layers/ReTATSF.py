@@ -1,70 +1,8 @@
-import pandas as pd
-import numpy as np
-from scipy.signal import coherence
 import torch
 from torch import nn
 from utils.Positional_Embedding import positional_encoding
 from utils.Coherence_Compute import vectorized_compute_coherence
 from sentence_transformers import SentenceTransformer
-
-# class TS_CoherAnalysis():
-#     def __init__(self):
-#         # 读取 Parquet 文件
-#         self.TS_data = pd.read_parquet("../dataset/Weather_captioned/weather_2014-18.parquet")
-#
-#     def refGen(self, target_id, start_point, configs):
-#         target_series = self.TS_data[target_id].tolist()
-#         target_series = target_series[start_point:start_point+configs.seq_len]
-#         #DFT_target_series = np.fft.fft(target_series)
-#
-#         Period = [self.TS_data['Date Time'][start_point], self.TS_data['Date Time'][start_point+configs.seq_len-1]]
-#         TS_database = self.TS_data.drop(columns=['Date Time', f'{target_id}'], inplace=False)
-#         TS_database = TS_database.iloc[start_point:start_point+configs.seq_len]
-#
-#         TS_database_list = {}
-#         #DFT_TS_database = []
-#         for id in TS_database.columns:
-#             TS_database_list[id] = TS_database[id].tolist()
-#             #DFT_TS_database[id] = np.fft.fft(TS_database_list[id])
-#         CoherCoefficients = {}
-#         for id in TS_database_list:
-#             f, Cxy = coherence(target_series, TS_database_list[id], fs=configs.freq_sample, nperseg=configs.nperseg)
-#             totalCxy = np.sum(Cxy)
-#             CoherCoefficients[id] = totalCxy
-#
-#         sorted_items = sorted(CoherCoefficients.items(), key=lambda x: x[1], reverse=True)[:configs.nref]
-#         sorted_id = [item[0] for item in sorted_items]
-#         RefTS = {id: TS_database_list[id] for id in sorted_id}
-#
-#         return RefTS, Period, target_series
-
-# class TS_CoherAnalysis():
-#     def __init__(self, configs):
-#         self.configs = configs
-#
-#     def refGen(self, TS_data):
-#         target_id = self.configs.target_id
-#
-#         start_point = TS_data['Date Time'][0]
-#         end_point = TS_data['Date Time'][-1]
-#         Period = [start_point, end_point]
-#
-#         target_series = TS_data[target_id].tolist()
-#         TS_database = TS_data.drop(columns=['Date Time', f'{target_id}'], inplace=False)
-#         TS_database_list = {}
-#         for id in TS_database.columns:
-#             TS_database_list[id] = TS_database[id].tolist()
-#         CoherCoefficients = {}
-#         for id in TS_database_list:
-#             f, Cxy = coherence(target_series, TS_database_list[id], fs=self.configs.freq_sample, nperseg=self.configs.nperseg)
-#             totalCxy = np.sum(Cxy)
-#             CoherCoefficients[id] = totalCxy
-#
-#         sorted_items = sorted(CoherCoefficients.items(), key=lambda x: x[1], reverse=True)[:self.configs.nref]
-#         sorted_id = [item[0] for item in sorted_items]
-#         RefTS = {id: TS_database_list[id] for id in sorted_id}
-#
-#         return RefTS, Period, target_series
 
 class TS_CoherAnalysis(nn.Module):
     def __init__(self, configs):
@@ -122,17 +60,7 @@ class ContentSynthesis(nn.Module):
         refs = positional_encoding(refs)
         refs = self.norm(refs) # [B, nref, L, D]
 
-        # # 嵌入参考序列
-        # refs = []
-        # for v in ref_dict.values():
-        #     r = self.ref_embed(v.unsqueeze(-1))  # [B, L, D]
-        #     r = positional_encoding(r)
-        #     r = self.norm(r)  # 归一化
-        #     refs.append(r)
-        # refs = torch.stack(refs, dim=1)  # [B, K, L, D]
-
         # 拼接目标序列和参考序列
-        #target = target.unsqueeze(1)  # [B, 1, L, D]
         combined = torch.cat([target, refs], dim=1)  # [B, K_text+1, L, D]
 
         # 多层级聚合（修改聚合层输入）
@@ -219,15 +147,6 @@ class AggregationLayer(nn.Module):
         x = x.reshape(B, C_Tmul_K_Tplus1_, L, D)
         return x
 
-class QueryTextencoder(nn.Module):
-    def __init__(self):
-        super(QueryTextencoder, self).__init__()
-        BERT_model = 'paraphrase-MiniLM-L6-v2'  # 'all-mpnet-base-v2'
-        self.model = SentenceTransformer(BERT_model)
-    def forward(self, Query):
-        query_emb = self.model(Query)#Query [B, 1, D]
-        return query_emb
-
 class TextCrossAttention(nn.Module):
     def __init__(self, configs, qt_embedding_dim=384, nd_embedding_dim=384, n_heads=8,
                  self_layer=3, cross_layer=3):
@@ -283,8 +202,6 @@ class TextCrossAttention(nn.Module):
         qt_emb = qt_emb.repeat(1, self.K_n, 1, 1).reshape(B*C_T*self.K_n, H, D)
         des_emb = des_emb.repeat(1, self.K_n, H, 1).reshape(B*C_T*self.K_n, H, D)
         ref_news_embed = ref_news_embed.reshape(B*C_TmulK_n, H, D)
-        #print('右下Q: ', qt_emb)
-        #print('右下KV: ', ref_news_embed)
 
         result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
         result = self.cross_encoder2(tgt=des_emb, memory=result)
@@ -411,9 +328,7 @@ class CrossandOutput(nn.Module):
         result = self.self_encoder(tgt=result, memory=result)  # [B*C_T*(K_T+1), L+H, D]
 
         # reshape the result
-        # attn_weights = result[1]
         result = result.view(B, C_Tmul_K_Tplus1_, -1, D_temp)
-        #print('mlp前的特征： ', result)
 
         # result = result[:, :, -H:, :]
         result = self.dimension_reducer(result)#[B, C_T, L+H, D]

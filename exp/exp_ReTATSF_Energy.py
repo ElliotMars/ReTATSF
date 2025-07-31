@@ -26,7 +26,7 @@ class Exp_Main(Exp_Basic):
         return model
 
     def _get_data(self, flag, target_ids):
-        data_set, data_loader = ReTATSF_Energy_data_provider(self.args, flag, target_ids, self.device)
+        data_set, data_loader = ReTATSF_Energy_data_provider(self.args, flag, target_ids)
         return data_set, data_loader
 
     def _select_optimizer(self):
@@ -81,10 +81,6 @@ class Exp_Main(Exp_Basic):
 
         self.target_ids = self.args.target_ids
 
-        #target_time = time.time()
-        #for target_id in self.target_ids:
-            #print('training Target: ', target_id)
-
         train_data, train_loader = self._get_data(flag='train', target_ids=self.target_ids)
         vali_data, vali_loader = self._get_data(flag='val', target_ids=self.target_ids)
         test_data, test_loader = self._get_data(flag='test', target_ids=self.target_ids)
@@ -120,8 +116,6 @@ class Exp_Main(Exp_Basic):
                 batch_qt = batch_qt.float().to(self.device)
                 batch_des = batch_des.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
-                # print('batch_target_series_x: ', batch_target_series_x)
-                # print('batch_target_series_y: ', batch_target_series_y)
 
                 outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
@@ -156,13 +150,6 @@ class Exp_Main(Exp_Basic):
                 break
 
             adjust_learning_rate(model_optim, scheduler, epoch + 1, self.args)
-
-            # print("Target {0} training cost time {1} Last Epoch: Train Loss: {2:.7f} Vali Loss: {3:.7f} \
-            # Test Loss: {4:.7f}".format(
-            #             target_id, time.time()-target_time, train_loss, vali_loss, test_loss))
-            #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            #best_target_model_path = path + '/' + target_id + '_best_checkpoint.pth'
-            #torch.save(self.model.state_dict(), best_target_model_path)
 
         return self.model
 
@@ -206,32 +193,6 @@ class Exp_Main(Exp_Basic):
 
                 outputs = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
-                    # outputs = outputs.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
-                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
-                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)#[b, 1, l]->[b, l, 1]
-                    #
-                    # b, l, c = outputs.shape
-                    # outputs = outputs.reshape(-1, c)
-                    # batch_target_series_y = batch_target_series_y.reshape(-1, c)
-                    #
-                    # outputs = outputs.detach().cpu().numpy()
-                    # batch_target_series_y = batch_target_series_y.detach().cpu().numpy()
-                    # outputs = test_data.scaler.inverse_transform(outputs).to(self.device)
-                    # batch_target_series_y = test_data.scaler.inverse_transform(batch_target_series_y).to(self.device)
-                    #
-                    # outputs = outputs.reshape(b, l, c)
-                    # batch_target_series_y = batch_target_series_y.reshape(b, l, c)
-                    #
-                    # b, l, c = batch_target_series_x.shape
-                    # batch_target_series_x = batch_target_series_x.reshape(-1, c)
-                    # batch_target_series_x = batch_target_series_x.detach().cpu().numpy()
-                    # batch_target_series_x = test_data.scaler.inverse_transform(batch_target_series_x).to(self.device)
-                    #
-                    # #outputs = outputs.squeeze(-1)#[b, l]
-                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
-                    # batch_target_series_x = batch_target_series_x.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
-                    # batch_target_series_y = batch_target_series_y.permute(0, 2, 1)  # [b, l, 1]->[b, 1, l]
-
                 outputs = outputs.detach().cpu().numpy()
                 batch_target_series_x = batch_target_series_x.detach().cpu().numpy()
                 batch_target_series_y = batch_target_series_y.detach().cpu().numpy()
@@ -248,10 +209,6 @@ class Exp_Main(Exp_Basic):
                         input = batch_target_series_x
                         gt = np.concatenate((input[0, j, :], true[0, j, :]), axis=0)
                         pd = np.concatenate((input[0, j, :], pred[0, j, :]), axis=0)
-                        #time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-                        # print("gt: ", gt)
-                        # print("pd: ", pd)
-                        # print('j: ', j)
                         visual(gt, pd, input.shape[-1], os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
                         j+=1
 
@@ -269,7 +226,6 @@ class Exp_Main(Exp_Basic):
 
         info_save_dir = os.path.join(folder_path, 'result.txt')
         f = open(info_save_dir, 'a')
-        #f.write(setting + "  \n")
         f.write('mse:{}, mae:{}, rse:{}'.format(mse, mae, rse))
         f.write('\n')
         f.write('\n')

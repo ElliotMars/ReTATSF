@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from typing import List
 
-K = 10  # 设置你想要的Top-K值
+K = 5  # 设置你想要的Top-K值
 
 def plot_topk_hit_statistics(top_files_per_query: List[List[str]], title: str = "Top-K Hit Counts", save_path: str = f'./fig/retrieval_statistics_{K}'):
     flat_top_files = [fname for query in top_files_per_query for fname in query]
@@ -39,9 +39,9 @@ start_time = datetime.strptime(start_time, "%Y-%m-%d")
 end_time = datetime.strptime(end_time, "%Y-%m-%d")
 
 # 查询文本向量
-dir_path = "./dataset/Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2/Gasoline Prices"
+dir_path = "./dataset/Time-MMD/textual/Energy/QueryText-embedding-paraphrase-MiniLM-L6-v2-ForecastingPoint/Gasoline Prices"
 npy_files = [f for f in os.listdir(dir_path) if f.endswith('.npy')]
-sampled_files = random.sample(npy_files, min(1000, len(npy_files)))
+sampled_files = random.sample(npy_files, min(100, len(npy_files)))
 print(f"抽取的查询文件: {sampled_files}")
 
 qt_samples = []
