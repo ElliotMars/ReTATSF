@@ -55,6 +55,7 @@ class ContentSynthesis(nn.Module):
         # 嵌入目标序列
         target = self.target_embed(target_seq.unsqueeze(-1))  # [B, 1, L, D]
         target = positional_encoding(target)  # 添加位置编码
+        target = self.norm(target)
 
         refs = self.ref_embed(ref_TS.unsqueeze(-1)) #[B, nref, L, D]
         refs = positional_encoding(refs)
@@ -309,6 +310,8 @@ class CrossandOutput(nn.Module):
             nn.Linear(temp_embedding_dim * 4, 1)
         )
 
+        self.length_reducer = nn.Linear(configs.seq_len+configs.pred_len, configs.pred_len)
+
     def forward(self, text_emb, temp_emb):#text_emb[B, C_T*K_n, H, D] temp_emb[B, C_T*(K_T+1), L, D]
         B, C_Tmul_K_Tplus1_, L, D_temp = temp_emb.shape #C=K_temp_plus1
         _, _, H, D_text = text_emb.shape#C=K_text
@@ -316,11 +319,19 @@ class CrossandOutput(nn.Module):
         temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
         temp_emb = self.TS_self_attention(tgt=temp_emb, memory=temp_emb)
         temp_emb = temp_emb.reshape(B, C_Tmul_K_Tplus1_, L, D_temp)
+
         text_emb = torch.cat((temp_emb, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]
+        temp_emb_out = temp_emb
+        text_emb_out = text_emb
+
+        # temp_emb = self.dimension_reducer(temp_emb)
+        # temp_emb = self.mlp(temp_emb).squeeze(-1)
+        # temp_emb = self.length_reducer(temp_emb)
+        #
+        # return temp_emb, temp_emb_out, text_emb_out
 
         temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
-        #text_emb = text_emb.reshape(B * C, H, D_text)
-        text_emb = text_emb.reshape(B * C_Tmul_K_Tplus1_, L+H, D_text)
+        text_emb = text_emb.reshape(B * C_Tmul_K_Tplus1_, L + H, D_text)
 
         # cross attention
         result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [B*C_T*(K_T+1), L+H, D] text as query
@@ -333,8 +344,9 @@ class CrossandOutput(nn.Module):
         # result = result[:, :, -H:, :]
         result = self.dimension_reducer(result)#[B, C_T, L+H, D]
         result = self.mlp(result).squeeze(-1)#[B, C_T, L+H, 1]->[B, C_T, L+H]
+        result = self.length_reducer(result)
 
-        return result[:, :, :H]
+        return result, temp_emb_out, text_emb_out
 
 class DimensionReducer(nn.Module):
     def __init__(self, configs, d_model=384, nhead=8, num_layers=3):
