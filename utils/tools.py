@@ -94,6 +94,8 @@ def visual(true, preds=None, seq_len=60, name='./pic/test.pdf'):
     else:
         plt.show()
 
+    plt.close()
+
 # def test_params_flop(model, batch_target_series_x, batch_TS_database, batch_qt, batch_newsdatabase):
 #     """
 #     If you want to thest former's flop, you need to give default value to inputs in model.forward(),
