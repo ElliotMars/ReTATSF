@@ -76,7 +76,7 @@ class Dataset_ReTATSF_Energy(Dataset):
         TS_database = TS_database[other_cols_names].values #[num_data, 21-C_T] list
 
         if self.scale:
-            cols_names = df_raw.columns[1:]
+            cols_names = df_raw.columns[2:]
             df_data = df_raw[cols_names]
             train_data = df_data[border1s[0]:border2s[0]]
             self.scaler.fit(train_data.values)
