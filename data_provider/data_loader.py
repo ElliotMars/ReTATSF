@@ -40,35 +40,38 @@ class Dataset_ReTATSF_Energy(Dataset):
         df_raw = pd.read_parquet(os.path.join(self.root_path, self.TS_data_path))
         # 参数定义
         original_rows = len(df_raw)
-        self.num_data = int(original_rows * self.num_data)
+        num_data = int(original_rows * self.num_data)
 
-        # 计算有效起始点范围
-        max_start = original_rows - self.stride * (self.num_data - 1) - 1
-        if max_start < 0:
-            raise ValueError(f"步长 {self.stride} 过大，无法抽取 {self.num_data} 行数据")
+        # # 计算有效起始点范围
+        # max_start = original_rows - self.stride * (num_data - 1) - 1
+        # if max_start < 0:
+        #     raise ValueError(f"步长 {self.stride} 过大，无法抽取 {num_data} 行数据")
+        #
+        # # 随机选择起始点
+        # start_index = np.random.randint(0, max_start) if max_start > 0 else max_start
+        #
+        # # 生成索引列表
+        # indices = [start_index + i for i in range(num_data)]
+        #
+        # # 抽取数据生成新 DataFrame
+        # df_raw = df_raw.iloc[indices]
+        df_raw = df_raw[:num_data]
 
-        # 随机选择起始点
-        start_index = np.random.randint(0, max_start) if max_start > 0 else max_start
-
-        # 生成索引列表
-        indices = [start_index + i * self.stride for i in range(self.num_data)]
-
-        # 抽取数据生成新 DataFrame
-        df_raw = df_raw.iloc[indices]
-
-        num_train = int(len(df_raw) * 0.6)
+        num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
 
-        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        border2s = [num_train, num_train + num_vali, len(df_raw)]
+        #border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        #border2s = [num_train, num_train + num_vali, len(df_raw)]
+        border1s = [0, num_train, num_train+num_vali]
+        border2s = [num_train, num_train+num_vali, num_train+num_vali+num_test]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
 
         #获得target series TS_database
         target_series = df_raw[self.target_ids].values.reshape(-1, len(self.target_ids))#[num_data, C_T]
 
-        TS_database = df_raw.drop(columns=self.target_ids + ['Date'])
+        TS_database = df_raw.drop(columns=self.target_ids + ['start_date'] + ['end_date'])
         other_cols_names = TS_database.columns[:]
         TS_database = TS_database[other_cols_names].values #[num_data, 21-C_T] list
 
