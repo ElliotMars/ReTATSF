@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=5,2
+export CUDA_VISIBLE_DEVICES=4,2
 
 #for group in "Gasoline Prices|East Coast|New England" "Central Atlantic|Lower Atlantic|Midwest" "Gulf Coast|Rocky Mountain|West Coast"
 #  do

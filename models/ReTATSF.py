@@ -21,6 +21,6 @@ class Model(nn.Module):
         Text_Synthesis = self.TextCrossAttention(qt, des, newsdatabase)#[B, C_T*K_n, H, D]
 
         #Cross and Output
-        prediction = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, C_T, H]
+        prediction, temp_emb, text_emb = self.CrossandOutput(Text_Synthesis, TS_Synthesis) #[B, C_T, H]
 
-        return prediction #[B, 1, L]
+        return prediction, temp_emb, text_emb #[B, 1, L]
