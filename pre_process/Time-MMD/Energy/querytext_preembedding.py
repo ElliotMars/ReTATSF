@@ -23,7 +23,9 @@ BATCH_SIZE = 64
 ENCODE_BATCH = 32
 
 df = pd.read_parquet('../../../dataset/Time-MMD/numerical/Energy/Energy.parquet')
-time_span = df['Date'].tolist()
+df['start_date'] = pd.to_datetime(df['start_date'])
+df['end_date'] = pd.to_datetime(df['end_date'])
+time_span = df[['start_date', 'end_date']].values.tolist()
 
 des = pd.read_parquet('../../../dataset/Time-MMD/textual/Energy/QueryTextPackage.parquet')
 
@@ -36,20 +38,20 @@ if ForecastingPoint:
     qts = []
     qts_keys = []
 
-    for t in time_span:
-        qt = (
-            f"{t}. "
-            #f"[Description]: {des[target_id].loc[0]}"
-        )
+    for row in df.itertuples(index=False):
+        start_date = row.start_date
+        end_date = row.end_date
+        qt = f"From {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}."
+        print(qt)
         qts.append(qt)
-        qts_keys.append(t)
+        qts_keys.append(start_date)
 
         if len(qts) == BATCH_SIZE:
             qts_embedding = model.encode(qts, batch_size=ENCODE_BATCH, show_progress_bar=False)
             qts_embedding = qts_embedding / np.linalg.norm(qts_embedding, axis=1, keepdims=True)
 
             for i in range(len(qts)):
-                np.save(os.path.join(save_dir, qts_keys[i][:10] + target_id + '.npy'), qts_embedding[i:i + 1])
+                np.save(os.path.join(save_dir, str(qts_keys[i])[:10] + target_id + '.npy'), qts_embedding[i:i + 1])
 
             pbar.update(len(qts))
             qts = []
@@ -61,7 +63,7 @@ if ForecastingPoint:
         qts_embedding = qts_embedding / np.linalg.norm(qts_embedding, axis=1, keepdims=True)
 
         for i in range(len(qts)):
-            np.save(os.path.join(save_dir, qts_keys[i][:10] + target_id + '.npy'), qts_embedding[i:i + 1])
+            np.save(os.path.join(save_dir, str(qts_keys[i])[:10] + target_id + '.npy'), qts_embedding[i:i + 1])
         pbar.update(len(qts))
 
     pbar.close()
