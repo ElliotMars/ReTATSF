@@ -70,8 +70,7 @@ class Exp_Main(Exp_Basic):
                         visual(gt, pd, input.shape[-1], os.path.join('./fig/vali_results', target_id+'_'+str(i)+'.pdf'))
                         j+=1
 
-                label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
-                loss = criterion(pred[:, :, :label_len], true[:, :, :label_len])
+                loss = criterion(pred, true)
 
                 total_loss.append(loss)
 
@@ -128,8 +127,7 @@ class Exp_Main(Exp_Basic):
 
                 outputs, temp_emb, text_emb = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
-                label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
-                loss = criterion(outputs[:, :, :label_len], batch_target_series_y[:, :, :label_len])
+                loss = criterion(outputs, batch_target_series_y)
                 train_loss.append(loss.item())
 
                 if (i + 1) % 10 == 0:
@@ -263,8 +261,7 @@ class Exp_Main(Exp_Basic):
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         inputx = inputx.reshape(-1, inputx.shape[-2], inputx.shape[-1])
 
-        label_len = self.args.pred_len if self.args.pred_len < self.args.label_len else self.args.label_len
-        mae, mse, rmse, mape, mspe, rse, corr = metric(preds[:, :, :label_len], trues[:, :, :label_len])
+        mae, mse, rmse, mape, mspe, rse, corr = metric(preds, trues)
         print('targets_{}: mse_{}, mae_{}'.format("".join(self.target_ids), mse, mae))
 
         info_save_dir = os.path.join(folder_path, 'result.txt')

@@ -28,7 +28,6 @@ do
             --qt_ref_text 5 \
             --seq_len 36 \
             --pred_len $pred_len \
-            --label_len 18 \
             --stride 1 \
             --learning_rate 1e-4 \
             --weight_decay 1e-4 \
