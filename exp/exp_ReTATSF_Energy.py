@@ -54,20 +54,23 @@ class Exp_Main(Exp_Basic):
 
                 time_now = time.time()
 
-                outputs, _, _ = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
+                outputs, _, _, _, _ = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
                 total_time += time.time() - time_now
 
                 pred = outputs.detach().cpu()
                 true = batch_target_series_y.detach().cpu()
 
-                if i % 5 == 0:
+                path = './fig/vali_results'
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                if i % 1 == 0:
                     j=0
                     for target_id in self.target_ids:
                         input = batch_target_series_x.detach().cpu()
                         gt = np.concatenate((input[0, j, :], true[0, j, :]), axis=0)
                         pd = np.concatenate((input[0, j, :], pred[0, j, :]), axis=0)
-                        visual(gt, pd, input.shape[-1], os.path.join('./fig/vali_results', target_id+'_'+str(i)+'.pdf'))
+                        visual(gt, pd, input.shape[-1], os.path.join(path, target_id+'_'+str(i)+'.pdf'))
                         j+=1
 
                 loss = criterion(pred, true)
@@ -125,7 +128,7 @@ class Exp_Main(Exp_Basic):
                 batch_des = batch_des.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
 
-                outputs, temp_emb, text_emb = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
+                outputs, temp_emb, text_emb, TS, TS_emb = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
                 loss = criterion(outputs, batch_target_series_y)
                 train_loss.append(loss.item())
@@ -140,6 +143,7 @@ class Exp_Main(Exp_Basic):
 
                     import matplotlib.pyplot as plt
                     import torch.nn.init as init
+                    import pandas as pd
 
                     # 设置样本和通道索引
                     B_idx = 0
@@ -148,29 +152,40 @@ class Exp_Main(Exp_Basic):
                     # 获取原始张量 [L, D] 和 [L+H, D]
                     sample_channel_temp = temp_emb[B_idx, C_idx]  # shape: [L, D]
                     sample_channel_text = text_emb[B_idx, C_idx]  # shape: [L+H, D]
+                    sample_channel_TS = TS[B_idx, C_idx]
+                    sample_channel_TS_emb = TS_emb[B_idx, C_idx]
 
-                    # 定义线性投影网络（共享或不共享都行，这里用两个）
-                    proj = nn.Linear(sample_channel_temp.shape[-1], 1).to(sample_channel_temp.device)
-                    # 初始化所有权重为相同的值，例如 1.0
-                    init.constant_(proj.weight, 1.0)  # 所有权重设为 1.0
-                    init.constant_(proj.bias, 0.0)  # 偏置设为 0.0（或也可设为 1.0）
+                    df_temp = pd.DataFrame(sample_channel_temp.detach().cpu().numpy())
+                    df_text = pd.DataFrame(sample_channel_text.detach().cpu().numpy())
+                    df_TS = pd.DataFrame(sample_channel_TS.detach().cpu().numpy())
+                    df_TS_emb = pd.DataFrame(sample_channel_TS_emb.detach().cpu().numpy())
+                    df_temp.to_csv(os.path.join('temp.csv'), index=False)
+                    df_text.to_csv(os.path.join('text.csv'), index=False)
+                    df_TS.to_csv(os.path.join(f'TS_{C_idx}.csv'), index=False)
+                    df_TS_emb.to_csv(os.path.join(f'TS_emb_{C_idx}.csv'), index=False)
 
-                    # 线性映射到一维
-                    temp_proj_1d = proj(sample_channel_temp).squeeze(-1).detach().cpu().numpy()  # shape: [L]
-                    text_proj_1d = proj(sample_channel_text).squeeze(-1).detach().cpu().numpy()  # shape: [L+H]
-
-                    # 画图
-                    plt.figure(figsize=(12, 5))
-                    plt.plot(text_proj_1d, label='text_emb 1D Projection', linewidth=2)
-                    plt.plot(temp_proj_1d, label='temp_emb 1D Projection', linewidth=2)
-                    plt.xlabel('Time Step')
-                    plt.ylabel('Projected Value')
-                    plt.title('1D Projection of temp_emb and text_emb')
-                    plt.legend()
-                    plt.grid(True)
-                    plt.tight_layout()
-                    plt.savefig('/data/dyl/ReTATSF/fig/projection.pdf')
-                    plt.close()
+                    # # 定义线性投影网络（共享或不共享都行，这里用两个）
+                    # proj = nn.Linear(sample_channel_temp.shape[-1], 1).to(sample_channel_temp.device)
+                    # # 初始化所有权重为相同的值，例如 1.0
+                    # init.constant_(proj.weight, 1.0)  # 所有权重设为 1.0
+                    # init.constant_(proj.bias, 0.0)  # 偏置设为 0.0（或也可设为 1.0）
+                    #
+                    # # 线性映射到一维
+                    # temp_proj_1d = proj(sample_channel_temp).squeeze(-1).detach().cpu().numpy()  # shape: [L]
+                    # text_proj_1d = proj(sample_channel_text).squeeze(-1).detach().cpu().numpy()  # shape: [L+H]
+                    #
+                    # # 画图
+                    # plt.figure(figsize=(12, 5))
+                    # plt.plot(text_proj_1d, label='text_emb 1D Projection', linewidth=2)
+                    # plt.plot(temp_proj_1d, label='temp_emb 1D Projection', linewidth=2)
+                    # plt.xlabel('Time Step')
+                    # plt.ylabel('Projected Value')
+                    # plt.title('1D Projection of temp_emb and text_emb')
+                    # plt.legend()
+                    # plt.grid(True)
+                    # plt.tight_layout()
+                    # plt.savefig('/data/dyl/ReTATSF/fig/projection.pdf')
+                    # plt.close()
 
                 loss.backward()
                 model_optim.step()
@@ -232,7 +247,7 @@ class Exp_Main(Exp_Basic):
                 batch_des = batch_des.float().to(self.device)
                 batch_newsdatabase = batch_newsdatabase.float().to(self.device)
 
-                outputs, _, _ = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
+                outputs, _, _, _, _ = self.model(batch_target_series_x, batch_TS_database, batch_qt, batch_des, batch_newsdatabase)
 
                 outputs = outputs.detach().cpu().numpy()
                 batch_target_series_x = batch_target_series_x.detach().cpu().numpy()
@@ -244,7 +259,7 @@ class Exp_Main(Exp_Basic):
                 preds.append(pred)
                 trues.append(true)
                 inputx.append(batch_target_series_x)
-                if i % 5 == 0:
+                if i % 1 == 0:
                     j=0
                     for target_id in self.target_ids:
                         input = batch_target_series_x

@@ -32,7 +32,7 @@ def ReTATSF_Energy_data_provider(args, flag, target_ids):
         Des_emb_path=Des_emb_path,
         NewsDatabase_path=NewsDatabase_path,
         flag=flag,
-        size=[args.seq_len, args.pred_len],
+        size=[args.seq_len, args.pred_len, args.label_len],
         target_ids=target_ids,
         scale=True,
         stride=args.stride,

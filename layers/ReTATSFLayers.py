@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from utils.Positional_Embedding import positional_encoding
 from utils.Coherence_Compute import vectorized_compute_coherence
-from sentence_transformers import SentenceTransformer
 
 class TS_CoherAnalysis(nn.Module):
     def __init__(self, configs):
@@ -31,7 +30,6 @@ class TS_CoherAnalysis(nn.Module):
         topk_sequences = torch.gather(TS_database.unsqueeze(1).repeat(1, C_T, 1, 1), 2,
                                       topk_indices.unsqueeze(-1).expand(-1, -1, -1,
                                         TS_database.size(-1))).view(B, C_T*self.configs.nref, L)
-
         return topk_sequences#[B, C_T*K_T, L]
 
 class ContentSynthesis(nn.Module):
@@ -62,13 +60,13 @@ class ContentSynthesis(nn.Module):
         refs = self.norm(refs) # [B, nref, L, D]
 
         # 拼接目标序列和参考序列
-        combined = torch.cat([target, refs], dim=1)  # [B, K_text+1, L, D]
-
+        combined = torch.cat([target, refs], dim=1)  # [B, C_TmulK_text+1, L, D]
+        synthesized = combined
         # 多层级聚合（修改聚合层输入）
         for layer in self.aggregation_layers:
-            combined = layer(combined)
+            synthesized = layer(synthesized)
 
-        return combined
+        return synthesized, torch.cat([target_seq, ref_TS], dim=1), combined
 
 
 class AggregationLayer(nn.Module):
@@ -204,8 +202,8 @@ class TextCrossAttention(nn.Module):
         des_emb = des_emb.repeat(1, self.K_n, H, 1).reshape(B*C_T*self.K_n, H, D)
         ref_news_embed = ref_news_embed.reshape(B*C_TmulK_n, H, D)
 
-        result = self.cross_encoder(tgt=qt_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
-        result = self.cross_encoder2(tgt=des_emb, memory=result)
+        result = self.cross_encoder(tgt=des_emb, memory=ref_news_embed)#[B*C_T*K_n, H, D]
+        result = self.cross_encoder2(tgt=qt_emb, memory=result)
         result = self.self_encoder(tgt=result, memory=result)#[B*C_T*K_n, H, D]
 
         result = result.view(B, C_T*self.K_n, -1, D)
@@ -309,42 +307,41 @@ class CrossandOutput(nn.Module):
             nn.ReLU(),
             nn.Linear(temp_embedding_dim * 4, 1)
         )
-
-        self.length_reducer = nn.Linear(configs.seq_len+configs.pred_len, configs.pred_len)
+        self.label_len = configs.label_len
+        self.length_reducer = nn.Linear(configs.label_len+configs.pred_len, configs.pred_len)
 
     def forward(self, text_emb, temp_emb):#text_emb[B, C_T*K_n, H, D] temp_emb[B, C_T*(K_T+1), L, D]
         B, C_Tmul_K_Tplus1_, L, D_temp = temp_emb.shape #C=K_temp_plus1
         _, _, H, D_text = text_emb.shape#C=K_text
-
-        temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
-        temp_emb = self.TS_self_attention(tgt=temp_emb, memory=temp_emb)
-        temp_emb = temp_emb.reshape(B, C_Tmul_K_Tplus1_, L, D_temp)
-
-        text_emb = torch.cat((temp_emb, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]
         temp_emb_out = temp_emb
         text_emb_out = text_emb
 
+        label = temp_emb[:, :, -self.label_len:, :].reshape(B * C_Tmul_K_Tplus1_, self.label_len, D_temp)
+        label = self.TS_self_attention(tgt=label, memory=label)
+        label = label.reshape(B, C_Tmul_K_Tplus1_, self.label_len, D_temp)
+
+        query_emb = torch.cat((label, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]
+
+        # temp_emb = self.length_reducer(temp_emb.permute(0, 1, 3, 2)).permute(0, 1, 3, 2)
         # temp_emb = self.dimension_reducer(temp_emb)
         # temp_emb = self.mlp(temp_emb).squeeze(-1)
-        # temp_emb = self.length_reducer(temp_emb)
         #
         # return temp_emb, temp_emb_out, text_emb_out
 
-        temp_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
-        text_emb = text_emb.reshape(B * C_Tmul_K_Tplus1_, L + H, D_text)
+        value_emb = temp_emb.reshape(B * C_Tmul_K_Tplus1_, L, D_temp)
+        query_emb = query_emb.reshape(B * C_Tmul_K_Tplus1_, self.label_len + H, D_text)
 
         # cross attention
-        result = self.cross_encoder(tgt=text_emb, memory=temp_emb)  # [B*C_T*(K_T+1), L+H, D] text as query
-
+        result = self.cross_encoder(tgt=query_emb, memory=value_emb)  # [B*C_T*(K_T+1), L+H, D] text as query
         result = self.self_encoder(tgt=result, memory=result)  # [B*C_T*(K_T+1), L+H, D]
 
         # reshape the result
         result = result.view(B, C_Tmul_K_Tplus1_, -1, D_temp)
 
         # result = result[:, :, -H:, :]
+        result = self.length_reducer(result.permute(0, 1, 3, 2)).permute(0, 1, 3, 2)
         result = self.dimension_reducer(result)#[B, C_T, L+H, D]
         result = self.mlp(result).squeeze(-1)#[B, C_T, L+H, 1]->[B, C_T, L+H]
-        result = self.length_reducer(result)
 
         return result, temp_emb_out, text_emb_out
 

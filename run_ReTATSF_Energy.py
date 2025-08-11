@@ -43,6 +43,7 @@ parser.add_argument('--qt_ref_text', type=int, default=5, help='number of text r
 #forecasting task
 parser.add_argument('--seq_len', type=int, default=60, help='sequence length')
 parser.add_argument('--pred_len', type=int, default=14, help='predicted length')
+parser.add_argument('--label_len', type=int, default=18, help='predicted step')
 parser.add_argument('--stride', type=int, default=8, help='stride')
 parser.add_argument('--target_ids', nargs='+', required=True, type=str, help='names of target TS')
 

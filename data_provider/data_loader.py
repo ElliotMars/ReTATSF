@@ -9,12 +9,13 @@ class Dataset_ReTATSF_Energy(Dataset):
     def __init__(self, root_path, TS_data_path, QT_emb_path, Des_emb_path, NewsDatabase_path, flag,
                  size, target_ids, scale, stride, num_data):
 
-        # size [seq_len, pred_len]
+        # size [seq_len, pred_len, label_len]
 
-        assert len(size) == 2
+        assert len(size) == 3
 
         self.seq_len = size[0]
         self.pred_len = size[1]
+        self.label_len = size[2]
 
         #init
         assert flag in ['train', 'val', 'test']
@@ -42,29 +43,26 @@ class Dataset_ReTATSF_Energy(Dataset):
         original_rows = len(df_raw)
         num_data = int(original_rows * self.num_data)
 
-        # # 计算有效起始点范围
-        # max_start = original_rows - self.stride * (num_data - 1) - 1
-        # if max_start < 0:
-        #     raise ValueError(f"步长 {self.stride} 过大，无法抽取 {num_data} 行数据")
-        #
-        # # 随机选择起始点
-        # start_index = np.random.randint(0, max_start) if max_start > 0 else max_start
-        #
-        # # 生成索引列表
-        # indices = [start_index + i for i in range(num_data)]
-        #
-        # # 抽取数据生成新 DataFrame
-        # df_raw = df_raw.iloc[indices]
-        df_raw = df_raw[:num_data]
+        # 计算有效起始点范围
+        max_start = original_rows - self.stride * (num_data - 1) - 1
+        if max_start < 0:
+            raise ValueError(f"步长 {self.stride} 过大，无法抽取 {num_data} 行数据")
+
+        # 随机选择起始点
+        start_index = np.random.randint(0, max_start) if max_start > 0 else max_start
+
+        # 生成索引列表
+        indices = [start_index + i for i in range(num_data)]
+
+        # 抽取数据生成新 DataFrame
+        df_raw = df_raw.iloc[indices]
 
         num_train = int(len(df_raw) * 0.7)
         num_test = int(len(df_raw) * 0.2)
         num_vali = len(df_raw) - num_train - num_test
 
-        #border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
-        #border2s = [num_train, num_train + num_vali, len(df_raw)]
-        border1s = [0, num_train, num_train+num_vali]
-        border2s = [num_train, num_train+num_vali, num_train+num_vali+num_test]
+        border1s = [0, num_train - self.seq_len, len(df_raw) - num_test - self.seq_len]
+        border2s = [num_train, num_train + num_vali, len(df_raw)]
         border1 = border1s[self.set_type]
         border2 = border2s[self.set_type]
 
