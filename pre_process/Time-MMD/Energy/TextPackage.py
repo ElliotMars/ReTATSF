@@ -2,13 +2,15 @@ import pandas as pd
 df = pd.read_csv('../../../dataset/Time-MMD/textual/Energy/Energy_report.csv')
 df.drop(df.columns[0], axis=1, inplace=True)
 # 正确地逐行拼接 Text 字段
-df['Text'] = df.apply(lambda row: f"From {row['start_date']} to {row['end_date']}: {row['fact']} {row['preds']}", axis=1)
+#df['Text'] = df.apply(lambda row: f"From {row['start_date']} to {row['end_date']}: {row['fact']} {row['preds']}", axis=1)
+df['Text'] = df.apply(lambda row: f"From {row['start_date']} to {row['end_date']}: {row['fact']}", axis=1)
 df.drop(['end_date', 'fact', 'preds'], axis=1, inplace=True)
 df.columns = ['Date', 'Text']
 
 df_search = pd.read_csv('../../../dataset/Time-MMD/textual/Energy/Energy_search.csv')
 df_search.drop(df_search.columns[0], axis=1, inplace=True)
-df_search['Text'] = df_search.apply(lambda row: f"From {row['start_date']} to {row['end_date']}: {row['fact']} {row['preds']}", axis=1)
+#df_search['Text'] = df_search.apply(lambda row: f"From {row['start_date']} to {row['end_date']}: {row['fact']} {row['preds']}", axis=1)
+df_search['Text'] = df_search.apply(lambda row: f"From {row['start_date']} to {row['end_date']}: {row['fact']}", axis=1)
 df_search.drop(['end_date', 'fact', 'preds'], axis=1, inplace=True)
 df_search.columns = ['Date', 'Text']
 
