@@ -11,7 +11,7 @@ class TS_CoherAnalysis(nn.Module):
     def forward(self, target_series, TS_database):
         nperseg = self.configs.nperseg
         B, C_T, L = target_series.shape
-        if self.configs.nref > TS_database.size(1):
+        if self.configs.nref >= TS_database.size(1):
             topk_sequences = TS_database.repeat(1, C_T, 1)
             padding = torch.zeros((B, self.configs.nref - TS_database.size(1), L),
                                   device=topk_sequences.device).repeat(1, C_T, 1)
@@ -322,7 +322,8 @@ class CrossandOutput(nn.Module):
 
         query_emb = torch.cat((label, text_emb), dim=2)#[B, C_T*(K_T+1), L+H, D]
 
-        # temp_emb = self.length_reducer(temp_emb.permute(0, 1, 3, 2)).permute(0, 1, 3, 2)
+        #temp_emb = self.length_reducer(temp_emb.permute(0, 1, 3, 2)).permute(0, 1, 3, 2)
+        # temp_emb = temp_emb[:, :, -H:, :]
         # temp_emb = self.dimension_reducer(temp_emb)
         # temp_emb = self.mlp(temp_emb).squeeze(-1)
         #
@@ -338,8 +339,8 @@ class CrossandOutput(nn.Module):
         # reshape the result
         result = result.view(B, C_Tmul_K_Tplus1_, -1, D_temp)
 
-        # result = result[:, :, -H:, :]
-        result = self.length_reducer(result.permute(0, 1, 3, 2)).permute(0, 1, 3, 2)
+        result = result[:, :, -H:, :]
+        #result = self.length_reducer(result.permute(0, 1, 3, 2)).permute(0, 1, 3, 2)
         result = self.dimension_reducer(result)#[B, C_T, L+H, D]
         result = self.mlp(result).squeeze(-1)#[B, C_T, L+H, 1]->[B, C_T, L+H]
 
@@ -384,11 +385,11 @@ class DimensionReducer(nn.Module):
 
         # 阶段4: 通道压缩 (将C维度压缩为1)
         # 调整输入张量的形状，使其符合 线性层 的要求 [B, C_T*(K_T+1), L+H, D] -> [B, D, L+H, C_T*(K_T+1)]
-        recovered = recovered.permute(0, 3, 1, 2).view(B, D, LplusH, -1, self.K_n)  # [B, D, L+H, C_T, (K_T+1)]
+        recovered = recovered.permute(0, 1, 3, 2).view(B, LplusH, D, -1, self.K_n)  # [B, D, L+H, C_T, (K_T+1)]
 
         # 应用线性层，将C维度压缩为1
-        squeezed = self.channel_reducer(recovered)  # [B, D, L+H, C_T, 1]
+        squeezed = self.channel_reducer(recovered)  # [B, L+H, D, C_T, 1]
 
-        # 最终维度调整 [B, D, L+H, C_T, 1] -> [B, C_T, 1, L+H, D]
-        final_output = squeezed.permute(0, 3, 4, 2, 1).squeeze(2)  # [B, C_T, L+H, D]
-        return final_output
+        # 最终维度调整 [B, D, L+H, C_T, 1] -> [B, C_T, L+H, D, 1]
+        reduced = squeezed.permute(0, 3, 1, 2, 4).squeeze(-1)  # [B, C_T, L+H, D]
+        return reduced

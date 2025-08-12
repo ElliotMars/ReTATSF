@@ -37,9 +37,9 @@ def vectorized_compute_coherence(target: torch.Tensor,
 
     # 计算交叉谱和自谱
     #Pxy = (fft_target.conj() * fft_database).mean(dim=2)  # [B, 21 - C_T, nperseg//2+1]
-    Pxy = torch.einsum('bcns,bkns->bckns', fft_target.conj(), fft_database).mean(dim=3).squeeze(3)#[B, C_T, 21 - C_T, nperseg//2+1]
-    Pxx = (torch.abs(fft_target) ** 2).mean(dim=2).squeeze(2)  # [B, C_T, nperseg//2+1]
-    Pyy = (torch.abs(fft_database) ** 2).mean(dim=2).squeeze(2)  # [B, 21 - C_T, nperseg//2+1]
+    Pxy = torch.einsum('bcns,bkns->bckns', fft_target.conj(), fft_database).mean(dim=3)#[B, C_T, 21 - C_T, nperseg//2+1]
+    Pxx = (torch.abs(fft_target) ** 2).mean(dim=2)  # [B, C_T, nperseg//2+1]
+    Pyy = (torch.abs(fft_database) ** 2).mean(dim=2)  # [B, 21 - C_T, nperseg//2+1]
 
     # 计算相干性
     coherence = (torch.abs(Pxy) ** 2) / (Pxx.unsqueeze(2) * Pyy.unsqueeze(1) + 1e-10)  # [B, C_T, 21 - C_T, nperseg//2+1]

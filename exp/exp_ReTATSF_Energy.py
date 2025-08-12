@@ -42,6 +42,9 @@ class Exp_Main(Exp_Basic):
         total_loss = []
         self.model.eval()
         total_time = 0
+        path = './fig/vali_results'
+        if not os.path.exists(path):
+            os.makedirs(path)
         with torch.no_grad():
             for i, (batch_target_series_x, batch_target_series_y,
                     batch_TS_database, batch_qt, batch_des, batch_newsdatabase) in enumerate(vali_loader):
@@ -60,14 +63,11 @@ class Exp_Main(Exp_Basic):
 
                 pred = outputs.detach().cpu()
                 true = batch_target_series_y.detach().cpu()
+                input = batch_target_series_x.detach().cpu()
 
-                path = './fig/vali_results'
-                if not os.path.exists(path):
-                    os.makedirs(path)
                 if i % 1 == 0:
                     j=0
                     for target_id in self.target_ids:
-                        input = batch_target_series_x.detach().cpu()
                         gt = np.concatenate((input[0, j, :], true[0, j, :]), axis=0)
                         pd = np.concatenate((input[0, j, :], pred[0, j, :]), axis=0)
                         visual(gt, pd, input.shape[-1], os.path.join(path, target_id+'_'+str(i)+'.pdf'))
@@ -255,6 +255,7 @@ class Exp_Main(Exp_Basic):
 
                 pred = outputs
                 true = batch_target_series_y
+                input = batch_target_series_x
 
                 preds.append(pred)
                 trues.append(true)
@@ -262,7 +263,6 @@ class Exp_Main(Exp_Basic):
                 if i % 1 == 0:
                     j=0
                     for target_id in self.target_ids:
-                        input = batch_target_series_x
                         gt = np.concatenate((input[0, j, :], true[0, j, :]), axis=0)
                         pd = np.concatenate((input[0, j, :], pred[0, j, :]), axis=0)
                         visual(gt, pd, input.shape[-1], os.path.join(folder_path, target_id+'_'+str(i)+'.pdf'))
