@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from torch import nn
 from thop import profile
 class EarlyStopping:
-    def __init__(self, patience=7, verbose=False, delta=0.01):
+    def __init__(self, patience=7, verbose=False, delta=0.0):
         self.patience = patience
         self.verbose = verbose
         self.counter = 0

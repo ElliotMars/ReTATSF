@@ -48,6 +48,7 @@ simplified_physical_quantities = {
 
 # 将字典转换为 Pandas DataFrame
 df = pd.DataFrame(simplified_physical_quantities)
+print(df)
 
 # 存储为 Parquet 文件
 df.to_parquet("../../../dataset/Time-MMD/textual/Energy/QueryTextPackage.parquet", engine="pyarrow")
